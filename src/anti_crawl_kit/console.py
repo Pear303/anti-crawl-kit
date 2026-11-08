@@ -102,7 +102,14 @@ _HEADER_RE = re.compile(
     r"(?im)\b(set-cookie|cookie|authorization)\s*:\s*[^\r\n]+"
 )
 
-# 2) key=value / key: value 形态（值至少 6 个字符，避免误伤短标识）
+# 2) JSON 形态：{"token": "abc123"} / {"password": "..."}
+_JSON_KV_RE = re.compile(
+    r'(?i)("(?:[A-Za-z0-9_.-]*(?:token|secret|password|passwd|sessdata|'
+    r'sessionid|ticket|api[_-]?key|access[_-]?key|signature)[A-Za-z0-9_.-]*)"'
+    r"\s*:\s*)(\"(?:[^\"\\\\]|\\\\.)*\")"
+)
+
+# 3) key=value / key: value 形态（值至少 6 个字符，避免误伤短标识）
 _KV_RE = re.compile(
     r"(?i)\b("
     r"[A-Za-z0-9_.-]*(?:token|secret|password|passwd|sessdata|sessionid|"
@@ -110,7 +117,7 @@ _KV_RE = re.compile(
     r")\s*([=:])\s*(\"[^\"]*\"|'[^']*'|[^\s,;&]+)"
 )
 
-# 3) Bearer / Basic token
+# 4) Bearer / Basic token
 _BEARER_RE = re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}")
 
 
@@ -135,6 +142,9 @@ def redact_secrets(text: str, *, placeholder: str = "<redacted>") -> str:
         return f"{match.group(1)}{match.group(2)}{placeholder}"
 
     value = _HEADER_RE.sub(_header, value)
+    value = _JSON_KV_RE.sub(
+        lambda match: f"{match.group(1)}\"{placeholder}\"", value
+    )
     value = _KV_RE.sub(_kv, value)
     value = _BEARER_RE.sub(lambda m: f"{m.group(1)} {placeholder}", value)
     return value

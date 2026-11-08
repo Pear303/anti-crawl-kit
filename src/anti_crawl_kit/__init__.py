@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 # 符号 → 子模块（PEP 562 惰性导出）
 _LAZY: dict[str, str] = {
@@ -138,6 +138,16 @@ _LAZY: dict[str, str] = {
     "SmokeResult": ".smoke",
     "count_in_html": ".smoke",
     "run_smoke": ".smoke",
+    # ── v0.5.0：recipe + MCP ──
+    "Recipe": ".recipe",
+    "RecipeRun": ".recipe",
+    "load_recipe": ".recipe",
+    "list_recipes": ".recipe",
+    "register_step": ".recipe",
+    "resume_recipe": ".recipe",
+    "run_recipe": ".recipe",
+    "validate_recipe": ".recipe",
+    "ToolService": ".mcp_server",
 }
 
 __all__ = [
@@ -254,6 +264,16 @@ __all__ = [
     "SmokeResult",
     "count_in_html",
     "run_smoke",
+    # ── v0.5.0 ──
+    "Recipe",
+    "RecipeRun",
+    "load_recipe",
+    "list_recipes",
+    "register_step",
+    "resume_recipe",
+    "run_recipe",
+    "validate_recipe",
+    "ToolService",
 ]
 
 

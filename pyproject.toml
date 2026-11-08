@@ -14,11 +14,14 @@ browser = ["patchright>=1.62.2"]
 http = ["curl_cffi>=0.7.0"]
 # 声明式平台配置（YAML）
 config = ["PyYAML>=6.0"]
+# MCP server（给 agent 直接调用）
+mcp = ["mcp>=1.0"]
 # 全部运行时能力
 all = [
     "patchright>=1.62.2",
     "curl_cffi>=0.7.0",
     "PyYAML>=6.0",
+    "mcp>=1.0",
 ]
 # 开发与 CI
 dev = [
@@ -36,6 +39,7 @@ ack-bench = "anti_crawl_kit.tools.bench:main"
 ack-audit = "anti_crawl_kit.tools.path_audit:main"
 ack-health = "anti_crawl_kit.tools.health_cli:main"
 ack-smoke = "anti_crawl_kit.tools.smoke_cli:main"
+ack-mcp = "anti_crawl_kit.mcp_server:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "anti_crawl_kit.__version__" }

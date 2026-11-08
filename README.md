@@ -35,6 +35,7 @@
 | 平台改版靠用户投诉发现 | `ack-health`：静态注册表校验 + 免登录动态探针 |
 | profile 涨到几个 GB、登录窗卡死 | `prune_profile_cache()`：白名单 + 双阈值 + 24h 节流 |
 | 发版前不知道真实链路是否可用 | `ack-smoke`：9 条真实站点用例 + 负向控制，FAIL 退出码 1 |
+| agent 不想记命令行 / 要直接调能力 | `ack-mcp`：14 个 MCP 工具 + 3 个 prompt + 4 个 resource |
 
 ---
 
@@ -46,6 +47,7 @@ pip install -e ".[all,dev]"      # 全部能力 + 测试
 # 按需：
 # pip install -e ".[browser]"     # 只要浏览器（patchright）
 # pip install -e ".[http]"        # 只要 HTTP（curl_cffi）
+# pip install -e ".[mcp]"         # 只要 MCP server
 # pip install -e ".[dev]"         # 纯逻辑 + 测试（不装 patchright）
 
 # 0) 一站式探测（可选加速器，3~5 行出决策）
@@ -120,6 +122,10 @@ ack-health --config ack_health.yaml --browser      # + 免登录动态探针
 # 18) 真实站点冒烟（发行门槛：8 类链路 + 负向控制）
 ack-smoke --json smoke.json
 ack-smoke --no-browser --strict                     # CI：强制要求浏览器用例
+
+# 19) MCP server：让 agent 直接调用探测/体检/冒烟/recipe
+ack-mcp                                             # stdio
+ack-mcp --transport http --port 8765                # Streamable HTTP
 ```
 
 不想安装成包也能跑：所有示例和工具都会自动把 `src/` 加进 `sys.path`。
@@ -181,8 +187,10 @@ browser-automation-kit/
 │  ├─ profile_cache.py          # ★ profile 缓存治理（白名单 + 双阈值 + 节流）
 │  ├─ console.py                # ★ GBK 控制台兜底 + 日志脱敏
 │  ├─ smoke.py                  # ★ 真实站点冒烟（8 类链路 + 负向控制）
+│  ├─ recipe.py                 # ★ 确定性骨架 + agent 检查点（handoff/resume）
+│  ├─ mcp_server.py             # ★ MCP server（14 tools + prompts + resources）
 │  └─ tools/                    # 探测与评测的库实现（随包安装）
-├─ examples/                    # 15 个可运行示例
+├─ examples/                    # 15 个可运行示例 + recipes/ 配方
 ├─ tools/                       # 兼容入口（实现在 src/anti_crawl_kit/tools/）
 │  ├─ agent_probe.py            # ★ Agent 一站式探测（决策 + JSON）
 │  ├─ dom_probe.py              # ★ 新平台接入探测（选择器/接口/框架）
@@ -326,6 +334,7 @@ python examples/07_config_driven.py examples/platforms/新平台.yaml --out outp
 | [23-平台路径全量审计](docs/23-平台路径全量审计.md) | 要测所有路径、比较方案、选生产最优 |
 | [24-健康体检与静默失效](docs/24-健康体检与静默失效.md) | 任务「成功」但 0 条、改版静默失效、profile 膨胀 |
 | [25-真实站点冒烟](docs/25-真实站点冒烟.md) | 发版前验证真实链路、负向控制、冒烟矩阵 |
+| [26-Agent接入与MCP](docs/26-Agent接入与MCP.md) | 让 agent 直接调用；recipe 检查点 / MCP tools |
 
 ---
 

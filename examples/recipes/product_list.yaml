@@ -1,0 +1,48 @@
+id: product_list
+title: 商品列表（确定性骨架）
+description: HTTP 抓取 → 形态分类 → 空壳检测 → 条目计数 → 断言；全程不需要 agent
+version: "1"
+allow_hosts:
+  - books.toscrape.com
+
+inputs:
+  url:
+    type: string
+    required: true
+    default: https://books.toscrape.com/
+
+steps:
+  - id: fetch
+    uses: http_get
+    with:
+      url: "${inputs.url}"
+
+  - id: classify
+    uses: classify_html
+    with:
+      html: "${steps.fetch.text}"
+      status: "${steps.fetch.status}"
+
+  - id: empty
+    uses: empty_shell
+    with:
+      html: "${steps.fetch.text}"
+      selector: "article.product_pod"
+
+  - id: count
+    uses: count_html
+    with:
+      html: "${steps.fetch.text}"
+      selector: "article.product_pod"
+
+  - id: assert_count
+    uses: assert
+    with:
+      value: "${steps.count.count}"
+      op: gte
+      expected: 20
+
+outputs:
+  count: "${steps.count.count}"
+  shape: "${steps.classify.kind}"
+  is_empty: "${steps.empty.is_empty}"

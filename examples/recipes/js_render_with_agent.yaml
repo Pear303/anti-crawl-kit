@@ -1,0 +1,79 @@
+id: js_render_with_agent
+title: JS 渲染页 + agent 选择器检查点
+description: |
+  HTTP 是空壳时，不硬猜选择器；把页面形态和空壳证据交给 agent，
+  由 agent 给出浏览器侧选择器，再继续执行。适合「脚本骨架 + 人工判断」混合场景。
+version: "1"
+allow_hosts:
+  - quotes.toscrape.com
+
+inputs:
+  url:
+    type: string
+    required: true
+    default: https://quotes.toscrape.com/js/
+
+steps:
+  - id: fetch
+    uses: http_get
+    with:
+      url: "${inputs.url}"
+
+  - id: classify
+    uses: classify_html
+    with:
+      html: "${steps.fetch.text}"
+      status: "${steps.fetch.status}"
+
+  - id: empty
+    uses: empty_shell
+    with:
+      html: "${steps.fetch.text}"
+      selector: "div.quote"
+
+  # ★ agent 检查点：需要判断的地方留白，不写死
+  - id: pick_selector
+    kind: agent
+    ask:
+      prompt: "HTTP 原始 HTML 里没有卡片。请给出浏览器渲染后引用卡片的选择器。"
+      schema:
+        type: object
+        properties:
+          selector:
+            type: string
+            description: CSS 选择器
+        required:
+          - selector
+      context_keys:
+        - steps.classify.kind
+        - steps.classify.advice
+        - steps.empty.is_empty
+        - steps.empty.matched
+      suggestions:
+        - div.quote
+        - .quote
+
+  - id: browser_fetch
+    uses: browser_goto
+    with:
+      url: "${inputs.url}"
+      wait_until: domcontentloaded
+
+  - id: browser_count
+    uses: browser_wait_count
+    with:
+      selector: "${steps.pick_selector.selector}"
+      min: 10
+      timeout_ms: 15000
+
+  - id: assert_count
+    uses: assert
+    with:
+      value: "${steps.browser_count.count}"
+      op: gte
+      expected: 10
+
+outputs:
+  http_matched: "${steps.empty.matched}"
+  browser_count: "${steps.browser_count.count}"
+  nav: "${steps.browser_fetch.nav}"

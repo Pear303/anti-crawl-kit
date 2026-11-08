@@ -180,6 +180,7 @@ tests/               无浏览器冒烟测试
 | 要测所有路径 / 选生产最优 | `docs/23-平台路径全量审计.md` |
 | 任务「成功」但 0 条 / 改版静默失效 | `docs/24-健康体检与静默失效.md` |
 | 发版前真实链路冒烟 / 负向控制 | `docs/25-真实站点冒烟.md` |
+| 让 agent 直连 / recipe 检查点 / MCP | `docs/26-Agent接入与MCP.md` |
 
 ---
 
@@ -218,7 +219,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 3. **每次只改一层。** 同时改选择器和接口，出问题无法归因。
 4. **留下证据。** 截图、HTML、meta、日志，出事能复盘。
 5. **验证墙前认输。** 停 + 通知 + 等人，比硬刚省时间。
-6. **任务成功 ≠ 拿到数据。** `RunReport` 必须带 `actual_count`；`actual_count=0` 一律 `empty`，CI 必须红。新增平台必须跑 `ack-health`，发版前必须跑 `ack-smoke`。
+6. **任务成功 ≠ 拿到数据。** `RunReport` 必须带 `actual_count`；`actual_count=0` 一律 `empty`，CI 必须红。新增平台必须跑 `ack-health`，发版前必须跑 `ack-smoke`。复杂流程用 `recipe` 固化，需要判断的地方留 `kind: agent` 检查点。
 
 ### 什么必须用，什么可选
 
@@ -227,6 +228,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 | **库** | `AntiRiskHttpClient`、`ChallengeGate`、`Notifier` | **必须**：补的是手写容易漏、漏了会出事的东西 |
 | **探测工具** | `agent_probe`、`js_api_hunt`、`dom_probe` | **可选**：加速器，agent 手写也行 |
 | **固化脚本** | `scripts/*.py`、`platforms/*.yaml`、`path_audit` 配置 | **必须**：生产环境不能每次让 LLM 现场生成 |
+| **MCP 接入** | `ack-mcp`（14 tools / 3 prompts / 4 resources） | **可选**：给非工程 agent 用；coding agent 读本文件即可 |
 
 ---
 
@@ -236,10 +238,10 @@ agent 手写能解决就手写，但不要裸 `requests`。
 - 系统 Chrome（或用 `channel="msedge"`）
 - 安装：`pip install -e ".[all,dev]"`（全部能力 + 测试）
   - 纯逻辑：`pip install -e ".[dev]"`（不装 patchright / curl_cffi）
-  - 按需：`pip install -e ".[browser]"` / `".[http]"` / `".[config]"`
+  - 按需：`pip install -e ".[browser]"` / `".[http]"` / `".[config]"` / `".[mcp]"`
 - `requirements.txt` 由 `scripts/gen_requirements.py` 生成，勿手改
 - 临时文件用 `C:\Windows\Temp\opencode`
-- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke`
+- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke` / `ack-mcp`
 
 ```bash
 python -m pytest tests -q             # 离线测试，应全绿

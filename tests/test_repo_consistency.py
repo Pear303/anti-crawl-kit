@@ -33,7 +33,7 @@ def test_readme_example_count_matches_files() -> None:
 def test_all_export_count_snapshot() -> None:
     import anti_crawl_kit
 
-    assert len(anti_crawl_kit.__all__) == 111
+    assert len(anti_crawl_kit.__all__) == 120
 
 
 def test_requirements_is_generated() -> None:

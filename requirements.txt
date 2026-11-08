@@ -6,6 +6,7 @@
 patchright>=1.62.2
 curl_cffi>=0.7.0
 PyYAML>=6.0
+mcp>=1.0
 
 # 开发 / 测试 / 构建
 pytest>=8.0
