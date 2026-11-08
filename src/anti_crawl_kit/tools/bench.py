@@ -35,8 +35,6 @@ sys.path.insert(0, str(ROOT / "src"))
 from anti_crawl_kit.adaptive_selector import extract_features
 from anti_crawl_kit.captcha import detect_captcha_page
 from anti_crawl_kit.datasource import detect_waf
-from anti_crawl_kit.http import AntiRiskHttpClient
-from anti_crawl_kit.risk import RiskKind
 
 
 @dataclass(frozen=True)
@@ -127,6 +125,10 @@ def _env() -> dict[str, str]:
 
 # ── HTTP ────────────────────────────────────────────
 def run_http(site: Site, *, timeout: int) -> BenchResult:
+    # 惰性导入：没有 curl_cffi 时仍可 `ack-bench --help`
+    from anti_crawl_kit.http import AntiRiskHttpClient
+    from anti_crawl_kit.risk import RiskKind
+
     client = AntiRiskHttpClient("bench", timeout=timeout, max_retries=1)
     started = time.perf_counter()
     try:

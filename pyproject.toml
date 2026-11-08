@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "浏览器自动化 + 反爬防风控基础工作包"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 dependencies = []
 
 [project.optional-dependencies]
