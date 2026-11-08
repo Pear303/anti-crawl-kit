@@ -1,0 +1,71 @@
+[project]
+name = "anti-crawl-kit"
+dynamic = ["version"]
+description = "浏览器自动化 + 反爬防风控基础工作包"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+# 浏览器层：patchright（Playwright 的防检测分支）
+browser = ["patchright>=1.62.2"]
+# HTTP 层：curl_cffi（TLS/JA3 指纹）
+http = ["curl_cffi>=0.7.0"]
+# 声明式平台配置（YAML）
+config = ["PyYAML>=6.0"]
+# 全部运行时能力
+all = [
+    "patchright>=1.62.2",
+    "curl_cffi>=0.7.0",
+    "PyYAML>=6.0",
+]
+# 开发与 CI
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "build>=1.2",
+]
+
+[project.scripts]
+ack-probe = "anti_crawl_kit.tools.agent_probe:main"
+ack-hunt = "anti_crawl_kit.tools.js_api_hunt:main"
+ack-dom = "anti_crawl_kit.tools.dom_probe:main"
+ack-detect = "anti_crawl_kit.tools.detector_check:main"
+ack-bench = "anti_crawl_kit.tools.bench:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "anti_crawl_kit.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+anti_crawl_kit = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "browser: 需要真实浏览器/网络，默认不跑；设置 ACK_BROWSER=1 开启",
+    "network: 需要外网访问",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = [".venv", "build", "dist"]
+
+[tool.ruff.lint]
+# 先只开「会直接导致运行错误」的规则，历史代码逐步收紧。
+select = ["E9", "F63", "F7", "F82"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_ignores = true
+ignore_missing_imports = true
+exclude = ["tests/", "examples/"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

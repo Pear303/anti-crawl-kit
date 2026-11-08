@@ -1,0 +1,41 @@
+# 国内平台配置模板（选择器会随改版失效，仅作结构示例）
+# 真实接入前务必用 tools/dom_probe.py 重新探测并更新。
+#
+# ⚠ 注意：
+#   1. 登录检测 JS 必须按实际页面调整，否则会一直等待。
+#   2. 平台有验证码时，captcha_platform 填内置名（zhihu/csdn/jianshu/juejin/baijiahao/baidu）。
+#   3. 抖音/快手/小红书的关键数据多在 JSON 接口里，DOM 方案只适合列表字段。
+
+name: xiaohongshu_search
+start_url: https://www.xiaohongshu.com/search_result?keyword=露营
+card_selector: section.note-item
+headless: false
+max_items: 20
+data_dir: ./profiles/xiaohongshu
+captcha_platform: ""
+login_js: |
+  () => {
+    var t = document.body ? document.body.innerText : '';
+    return t.indexOf('登录') === -1 || !!document.querySelector('.user, .avatar');
+  }
+
+scroll:
+  times: 15
+  delay_min: 1.5
+  delay_max: 3.5
+  stop_if_no_new: 3
+
+fields:
+  title:
+    selector: a.title span
+    attr: text
+  author:
+    selector: a.author span
+    attr: text
+  like:
+    selector: span.count
+    attr: text
+    transform: count
+  url:
+    selector: a.cover
+    attr: href

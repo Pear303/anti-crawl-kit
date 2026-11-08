@@ -1,0 +1,13 @@
+# 自动生成，勿手改。
+# 来源：pyproject.toml
+# 重新生成：python scripts/gen_requirements.py
+
+# 运行时（全部能力）
+patchright>=1.62.2
+curl_cffi>=0.7.0
+PyYAML>=6.0
+
+# 开发 / 测试 / 构建
+pytest>=8.0
+ruff>=0.6
+build>=1.2

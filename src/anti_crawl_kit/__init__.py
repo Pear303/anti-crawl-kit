@@ -1,0 +1,208 @@
+"""anti_crawl_kit —— 浏览器自动化 + 反爬防风控基础工作包。
+
+分层安装（按需，不装也能 import 纯逻辑模块）::
+
+    pip install anti-crawl-kit              # 纯逻辑，零第三方依赖
+    pip install "anti-crawl-kit[http]"      # + curl_cffi（TLS 指纹）
+    pip install "anti-crawl-kit[browser]"   # + patchright（浏览器）
+    pip install "anti-crawl-kit[all]"       # 全部
+
+所有顶层符号都是惰性导入（PEP 562）：只有真正访问时才加载对应模块。
+所以没装 patchright 也能 `import anti_crawl_kit`，并使用 js_bundle /
+datasource / risk / adaptive_selector 等纯逻辑能力。
+
+典型用法::
+
+    from anti_crawl_kit import AntiRiskHttpClient   # 需要 [http]
+    from anti_crawl_kit import BrowserSession       # 需要 [browser]
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+__version__ = "0.1.0"
+
+# 符号 → 子模块（PEP 562 惰性导出）
+_LAZY: dict[str, str] = {
+    "AntiCrawlGuard": ".guard",
+    "AntiRiskHttpClient": ".http",
+    "BrowserClosedError": ".alive",
+    "BrowserSession": ".session",
+    "CHROMIUM_ARGS": ".session",
+    "CaptchaDetection": ".captcha",
+    "ChallengeDetected": ".challenge",
+    "ChallengeGate": ".challenge",
+    "ChallengeInfo": ".notify",
+    "CookieState": ".platform_spec",
+    "DEFAULT_AD_KEYWORDS": ".content_quality",
+    "DataSourcePolicy": ".datasource",
+    "ElementFeatures": ".adaptive_selector",
+    "EmptyShellResult": ".empty_shell",
+    "FetchOutcome": ".datasource",
+    "HttpResult": ".http",
+    "IdentityState": ".platform_spec",
+    "JsFinding": ".js_bundle",
+    "JsHuntResult": ".js_bundle",
+    "LoadMoreDriver": ".loadmore",
+    "LoadMoreResult": ".loadmore",
+    "LoginStatus": ".login",
+    "Notifier": ".notify",
+    "PageAdapter": ".page",
+    "PageShape": ".page_shape",
+    "PlatformCapability": ".platform_spec",
+    "pick_path": ".state_extract",
+    "QualityIssue": ".content_quality",
+    "QualityResult": ".content_quality",
+    "RelocateResult": ".adaptive_selector",
+    "RiskDecision": ".risk",
+    "RiskKind": ".risk",
+    "STEALTH_JS": ".stealth",
+    "StateResult": ".state_extract",
+    "StopReason": ".datasource",
+    "WaitOutcome": ".waiting",
+    "check_batch": ".content_quality",
+    "check_content": ".content_quality",
+    "check_identity": ".platform_spec",
+    "classify_exception": ".datasource",
+    "classify_http_result": ".risk",
+    "classify_page_shape": ".page_shape",
+    "compare_items": ".datasource",
+    "detect_captcha_page": ".captcha",
+    "detect_empty_shell": ".empty_shell",
+    "detect_states": ".page_shape",
+    "detect_waf": ".datasource",
+    "ensure_alive": ".alive",
+    "eval_cookie_state": ".platform_spec",
+    "extract_balanced": ".state_extract",
+    "extract_features": ".adaptive_selector",
+    "extract_state": ".state_extract",
+    "fetch_with_fallback": ".datasource",
+    "get_global_guard": ".guard",
+    "get_platform_captcha_dom_js": ".captcha",
+    "hunt_api": ".js_bundle",
+    "human_delay": ".behavior",
+    "human_scroll": ".behavior",
+    "is_page_closed": ".alive",
+    "normalize_handle": ".platform_spec",
+    "notify_challenge": ".notify",
+    "parse_cookie_header": ".js_bundle",
+    "random_sleep": ".behavior",
+    "relocate": ".adaptive_selector",
+    "resolve_source_mode": ".datasource",
+    "should_block_task": ".platform_spec",
+    "similarity": ".adaptive_selector",
+    "wait_for_captcha_and_login": ".waiting",
+    "wait_for_stable_text": ".waiting",
+    "HttpSignedSpec": ".http_signed",
+    "SignedEndpoint": ".http_signed",
+    "classify_signed_response": ".http_signed",
+    "get_signer": ".http_signed",
+    "list_signers": ".http_signed",
+    "load_http_signed_spec": ".http_signed",
+    "register_signer": ".http_signed",
+    "render_params": ".http_signed",
+    "spec_from_dict": ".http_signed",
+    "RunReport": ".run_report",
+    "assert_thresholds": ".run_report",
+}
+
+__all__ = [
+    "AntiCrawlGuard",
+    "AntiRiskHttpClient",
+    "BrowserClosedError",
+    "BrowserSession",
+    "CHROMIUM_ARGS",
+    "CaptchaDetection",
+    "ChallengeDetected",
+    "ChallengeGate",
+    "ChallengeInfo",
+    "CookieState",
+    "DEFAULT_AD_KEYWORDS",
+    "DataSourcePolicy",
+    "ElementFeatures",
+    "EmptyShellResult",
+    "FetchOutcome",
+    "HttpResult",
+    "IdentityState",
+    "JsFinding",
+    "JsHuntResult",
+    "LoadMoreDriver",
+    "LoadMoreResult",
+    "LoginStatus",
+    "Notifier",
+    "PageAdapter",
+    "PageShape",
+    "PlatformCapability",
+    "pick_path",
+    "QualityIssue",
+    "QualityResult",
+    "RelocateResult",
+    "RiskDecision",
+    "RiskKind",
+    "STEALTH_JS",
+    "StateResult",
+    "StopReason",
+    "WaitOutcome",
+    "check_batch",
+    "check_content",
+    "check_identity",
+    "classify_exception",
+    "classify_http_result",
+    "classify_page_shape",
+    "compare_items",
+    "detect_captcha_page",
+    "detect_empty_shell",
+    "detect_states",
+    "detect_waf",
+    "ensure_alive",
+    "eval_cookie_state",
+    "extract_balanced",
+    "extract_features",
+    "extract_state",
+    "fetch_with_fallback",
+    "get_global_guard",
+    "get_platform_captcha_dom_js",
+    "hunt_api",
+    "human_delay",
+    "human_scroll",
+    "is_page_closed",
+    "normalize_handle",
+    "notify_challenge",
+    "parse_cookie_header",
+    "random_sleep",
+    "relocate",
+    "resolve_source_mode",
+    "should_block_task",
+    "similarity",
+    "wait_for_captcha_and_login",
+    "wait_for_stable_text",
+    "HttpSignedSpec",
+    "SignedEndpoint",
+    "classify_signed_response",
+    "get_signer",
+    "list_signers",
+    "load_http_signed_spec",
+    "register_signer",
+    "render_params",
+    "spec_from_dict",
+    "RunReport",
+    "assert_thresholds",
+]
+
+
+def __getattr__(name: str) -> Any:
+    """按需导入子模块，避免 import anti_crawl_kit 就拖起 patchright。"""
+    module_name = _LAZY.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from importlib import import_module
+
+    module = import_module(module_name, __name__)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)

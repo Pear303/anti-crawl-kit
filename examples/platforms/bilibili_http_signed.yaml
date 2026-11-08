@@ -1,0 +1,49 @@
+# B站带签名 / 风控码的 HTTP 数据源示例（L1）
+#
+# 这两个接口匿名可用，但 navnum 是非文档化接口，B站有加 WBI 签名的先例。
+# 真遇到签名时：
+#   1) 注册签名器（工作包不内置算法）：
+#        from anti_crawl_kit.http_signed import register_signer
+#        @register_signer("bilibili_wbi")
+#        def wbi(ctx): ...
+#   2) 或把 fallback 第一项改成 browser_xhr，用浏览器拦截。
+#
+# 用法：
+#   python -c "from anti_crawl_kit.http_signed import load_http_signed_spec; \
+#              print(load_http_signed_spec('examples/platforms/bilibili_http_signed.yaml').to_dict())"
+
+name: bilibili_user_stats
+platform: bilibili
+mode: http_signed
+auth_check: ""            # 匿名即可；需要登录态时改成 cookie:SESSDATA
+fallback: [http_signed, browser_xhr]
+
+endpoints:
+  relation:
+    url: https://api.bilibili.com/x/relation/stat
+    method: GET
+    params:
+      vmid: "{uid}"
+    headers:
+      Referer: "https://space.bilibili.com/{uid}"
+    risk_codes:
+      "-352": captcha
+      "-799": rate_limited
+      "-509": rate_limited
+      "-404": not_found
+    required_fields:
+      - data.follower
+      - data.following
+
+  navnum:
+    url: https://api.bilibili.com/x/space/navnum
+    method: GET
+    params:
+      mid: "{uid}"
+    headers:
+      Referer: "https://space.bilibili.com/{uid}"
+    risk_codes:
+      "-352": captcha
+      "-799": rate_limited
+    required_fields:
+      - data.video

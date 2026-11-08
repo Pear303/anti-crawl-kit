@@ -1,0 +1,31 @@
+# 运行时生成的浏览器 profile（含登录态，绝对不能提交）
+profiles/
+browser-data/
+
+# 示例输出 / 运行报告
+output/
+runs/
+*.png
+
+# 自适应选择器基线（运行时生成）
+.adaptive/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 本地配置 / 密钥
+.env
+*.local.yaml
+
+# 临时文件
+_h.txt
+*.log

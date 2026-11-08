@@ -1,0 +1,32 @@
+# 声明式平台配置示例
+# 用法: python examples/07_config_driven.py examples/platforms/quotes.yaml
+#
+# 新平台接入时复制这个文件，改选择器即可。
+# 选择器怎么找：python tools/dom_probe.py --url "目标URL"
+
+name: quotes
+start_url: https://quotes.toscrape.com/
+card_selector: div.quote
+headless: true
+max_items: 10
+data_dir: ./profiles/quotes
+
+scroll:
+  times: 3
+  delay_min: 0.5
+  delay_max: 1.0
+  stop_if_no_new: 1
+
+fields:
+  text:
+    selector: span.text
+    attr: text
+  author:
+    selector: small.author
+    attr: text
+  tags:
+    selector: a.tag
+    all: true
+  author_url:
+    selector: small.author ~ a
+    attr: href
