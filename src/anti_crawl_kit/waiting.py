@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any, Callable
 
 from .alive import ensure_alive
@@ -35,6 +36,21 @@ logger = logging.getLogger(__name__)
 _HEARTBEAT_INTERVAL = 15
 
 
+class WaitReason(StrEnum):
+    """固定失败归因优先级（从高到低）。
+
+    实战：抖音曾把「未登录 / 关窗」统一误报成「验证码已等待完成但被风控」，
+    排查方向直接被带偏。归因必须按固定优先级，不能按「最后看到的异常」。
+    """
+
+    OK = "ok"
+    BROWSER_CLOSED = "browser_closed"
+    CAPTCHA_NOT_DONE = "captcha_not_done"
+    NOT_LOGGED_IN = "not_logged_in"
+    EMPTY_AFTER_CAPTCHA = "empty_after_captcha"
+    EMPTY_RESULT = "empty_result"
+
+
 @dataclass(frozen=True)
 class WaitOutcome:
     """编排结果。"""
@@ -46,6 +62,31 @@ class WaitOutcome:
     elapsed: float
     last_captcha_reason: str = ""
     last_login_method: str = ""
+    reason: str = ""
+
+
+def classify_wait_outcome(
+    outcome: WaitOutcome,
+    *,
+    item_count: int | None = None,
+    browser_closed: bool = False,
+) -> WaitReason:
+    """按固定优先级归因，避免「关窗/未登录」被误报成风控。
+
+    优先级：
+        浏览器关闭 > 人机验证未完成 > 未登录 > 过验证码后仍空 > 一般空结果
+    """
+    if browser_closed:
+        return WaitReason.BROWSER_CLOSED
+    if outcome.captcha_exhausted:
+        return WaitReason.CAPTCHA_NOT_DONE
+    if not outcome.login_ok:
+        return WaitReason.NOT_LOGGED_IN
+    if item_count == 0:
+        if outcome.captcha_resolved and outcome.last_captcha_reason:
+            return WaitReason.EMPTY_AFTER_CAPTCHA
+        return WaitReason.EMPTY_RESULT
+    return WaitReason.OK
 
 
 def wait_for_captcha_and_login(
@@ -153,6 +194,7 @@ def wait_for_captcha_and_login(
                     elapsed=elapsed,
                     last_captcha_reason=last_captcha_reason,
                     last_login_method=last_login_method,
+                    reason=WaitReason.CAPTCHA_NOT_DONE.value,
                 )
             time.sleep(poll)
             captcha_clock += poll
@@ -190,6 +232,7 @@ def wait_for_captcha_and_login(
                 elapsed=time.time() - t0,
                 last_captcha_reason=last_captcha_reason,
                 last_login_method=last_login_method,
+                reason=WaitReason.OK.value,
             )
 
         # 3. 未登录（无验证码）
@@ -243,6 +286,7 @@ def wait_for_captcha_and_login(
         elapsed=elapsed,
         last_captcha_reason=last_captcha_reason,
         last_login_method=last_login_method,
+        reason=WaitReason.NOT_LOGGED_IN.value,
     )
 
 

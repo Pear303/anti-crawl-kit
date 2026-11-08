@@ -7,11 +7,24 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
+from typing import TYPE_CHECKING, Any
 
-from patchright.sync_api import Page as PlaywrightPage
+if TYPE_CHECKING:  # 仅在类型检查时导入，未装 patchright 也能 import 本模块
+    from patchright.sync_api import Page as PlaywrightPage
 
 logger = logging.getLogger(__name__)
+
+# 慢加载提示：不要把用户逼进「反复重开 → 风控冷却更长」的恶性循环。
+_SLOW_LOAD_HINT = (
+    "平台可能处于时段性惩罚窗口（同代码跨时段可差 3~6 倍）。"
+    "请等待 1~2 分钟再试，不要反复重开浏览器——重开只会延长冷却。"
+)
+
+
+def _is_timeout_error(exc: BaseException) -> bool:
+    return "timeout" in type(exc).__name__.lower() or "timeout" in str(exc).lower()
 
 
 class PageAdapter:
@@ -22,6 +35,9 @@ class PageAdapter:
         self._capture_handlers: dict[str, object] = {}
         self._anti_crawl = anti_crawl
         self._guard = None
+        # 最近一次导航的可观测指标（goto_ms / slow_load / ready_state /
+        # recovered_from_timeout / attempts）。诊断与 bench 读这里，不截图。
+        self.last_nav_metrics: dict[str, Any] = {}
         if anti_crawl:
             try:
                 from .guard import get_global_guard
@@ -51,18 +67,50 @@ class PageAdapter:
         timeout: int = 20000,
         max_retries: int = 3,
         backoff_base: float = 2.0,
+        slow_load_ms: int | None = None,
+        ensure_ready: bool = True,
     ):
-        """导航到 URL，带指数退避重试 + reload。
+        """导航到 URL，带指数退避重试 + reload + 首导航自愈。
 
+        为什么不是「超时就关窗判失败」：
+            五轮对照实验证明技术栈没有性能缺陷，慢是平台时段性惩罚窗口
+            （passport challenge 挂起 9~13s，同代码跨时段差 3~6 倍）。
+            旧实现一超时就关窗，用户反复重开 → 冷却越来越长。
+
+        行为：
         - 首次 goto；失败后 reload（比重新 goto 快，且保留页面上下文）。
         - 退避公式：backoff_base * 2^attempt，上限 30s。
         - 反爬守卫只在首次导航前补延时，重试不重复延时。
-        - 返回最后一次导航的 Response（可能为 None），供需要状态码的调用方使用。
+        - ``goto`` 超时不直接判失败：先轮询 ``document.readyState``，
+          已到 interactive/complete 就按「慢加载」继续。
+        - ``about:blank`` 跳过自愈；``chrome-error://`` 视为可交互。
+        - 指标写入 ``self.last_nav_metrics``，诊断/bench 读指标，不要截图
+          （实测 screenshot() 会把 10~12s 拉到 25~40s，数据失真）。
+
+        Returns:
+            最后一次导航的 Response（可能为 None），供需要状态码的调用方使用。
         """
+        if slow_load_ms is None:
+            try:
+                slow_load_ms = int(os.environ.get("AC_KIT_SLOW_LOAD_MS", "15000") or 15000)
+            except ValueError:
+                slow_load_ms = 15000
+
+        self.last_nav_metrics = {
+            "url": url,
+            "attempts": 0,
+            "goto_ms": 0,
+            "ready_state": "",
+            "slow_load": False,
+            "recovered_from_timeout": False,
+            "error": "",
+        }
         last_error: Exception | None = None
         if self._guard is not None:
             self._guard.wait_nav_gap(url)
+
         for attempt in range(max_retries):
+            started = time.perf_counter()
             try:
                 if attempt == 0:
                     response = self._driver.goto(
@@ -72,17 +120,121 @@ class PageAdapter:
                     response = self._driver.reload(
                         wait_until=wait_until, timeout=timeout
                     )
+                elapsed_ms = int((time.perf_counter() - started) * 1000)
+                self.last_nav_metrics.update(attempts=attempt + 1, goto_ms=elapsed_ms)
+                if elapsed_ms >= slow_load_ms:
+                    self.last_nav_metrics["slow_load"] = True
+                    logger.warning(
+                        "[anti-crawl] 导航偏慢 %.1fs（阈值 %.1fs），继续等待而非判失败",
+                        elapsed_ms / 1000,
+                        slow_load_ms / 1000,
+                    )
+                if ensure_ready and not self._is_blank_url(url):
+                    ready = self._ensure_initial_navigation_ready()
+                    self.last_nav_metrics["ready_state"] = self._ready_state()
+                    if not ready:
+                        self.last_nav_metrics["slow_load"] = True
+                        logger.warning(
+                            "[anti-crawl] 首导航完成事件疑似丢失（readyState=%r），"
+                            "继续尝试而不是立刻判失败",
+                            self.last_nav_metrics["ready_state"],
+                        )
                 self._post_navigation_risk_check(url)
                 return response
-            except Exception as e:
-                last_error = e
+            except Exception as exc:
+                elapsed_ms = int((time.perf_counter() - started) * 1000)
+                self.last_nav_metrics.update(attempts=attempt + 1, goto_ms=elapsed_ms)
+                last_error = exc
+                is_timeout = _is_timeout_error(exc)
+                if is_timeout:
+                    self.last_nav_metrics["slow_load"] = True
+                    # 慢加载 ≠ 失败：页面可能已经可交互，只是完成事件丢了。
+                    if ensure_ready and self._ensure_initial_navigation_ready(
+                        retries=1, timeout=7.0
+                    ):
+                        self.last_nav_metrics["recovered_from_timeout"] = True
+                        self.last_nav_metrics["ready_state"] = self._ready_state()
+                        logger.warning(
+                            "[anti-crawl] goto 超时但页面已可交互，按慢加载继续: %s", url
+                        )
+                        self._post_navigation_risk_check(url)
+                        return None
+                self.last_nav_metrics["error"] = f"{type(exc).__name__}: {exc}"
                 if attempt >= max_retries - 1:
+                    if is_timeout:
+                        raise TimeoutError(
+                            f"导航超时 {timeout}ms（{url}）。{_SLOW_LOAD_HINT}"
+                        ) from exc
                     raise
                 wait = min(backoff_base * (2 ** attempt), 30.0)
                 time.sleep(wait)
         if last_error:
             raise last_error
         return None
+
+    def _is_blank_url(self, url: str) -> bool:
+        return (url or "").strip().lower().startswith("about:blank")
+
+    def _current_url(self) -> str:
+        try:
+            return str(self._driver.url or "")
+        except Exception:
+            return ""
+
+    def _ready_state(self) -> str:
+        """读取 document.readyState。
+
+        ★ patchright 1.62.1 的 sync ``Page.evaluate`` **没有** ``timeout`` 参数，
+        不要照 1.61.2 的写法传 timeout；这里也不包 PageAdapter.evaluate，
+        避免 isolated_context 语义干扰。
+        """
+        try:
+            return str(self._driver.evaluate("() => document.readyState") or "")
+        except Exception:
+            return ""
+
+    def _ensure_initial_navigation_ready(
+        self,
+        retries: int = 2,
+        timeout: float = 7.0,
+    ) -> bool:
+        """首导航自愈：等 readyState 到 interactive/complete。
+
+        「空白转圈」根因是 patchright 版本 gap + 网络抖动导致首导航完成事件
+        丢失，``goto`` 却返回成功。这里用显式轮询兜住。
+        """
+        try:
+            if self._driver.is_closed():
+                return False
+        except Exception:
+            pass
+
+        current = self._current_url()
+        if not current or self._is_blank_url(current):
+            return True
+        if current.startswith("chrome-error://"):
+            return True
+
+        for attempt in range(max(1, retries)):
+            try:
+                self._driver.wait_for_load_state(
+                    "domcontentloaded", timeout=int(timeout * 1000)
+                )
+                return True
+            except Exception:
+                pass
+            state = self._ready_state()
+            if state in ("interactive", "complete"):
+                return True
+            current = self._current_url()
+            if current.startswith("chrome-error://"):
+                return True
+            if attempt < retries - 1:
+                try:
+                    self._driver.wait_for_timeout(500)
+                except Exception:
+                    time.sleep(0.5)
+        return self._ready_state() in ("interactive", "complete")
 
     def _post_navigation_risk_check(self, url: str) -> None:
         """后导航风控检测：命中只记录日志，不打断采集流程。"""

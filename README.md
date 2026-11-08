@@ -31,6 +31,9 @@
 | 页面是 SPA，HTML 只有一个 script | `js_api_hunt.py --browser always`：枚举页面实际加载的全部 JS |
 | 不知道 HTTP 够不够、该不该开浏览器 | `tools/bench.py`：同站两路实测，比成功率与成本 |
 | 不知道有没有漏掉某条路径 | `docs/23`：14 条路径全量审计 + 生产选型评分卡 |
+| 任务「成功」但 0 条数据 | `RunReport` 强制 `actual_count=0 → empty`，CI 直接红 |
+| 平台改版靠用户投诉发现 | `ack-health`：静态注册表校验 + 免登录动态探针 |
+| profile 涨到几个 GB、登录窗卡死 | `prune_profile_cache()`：白名单 + 双阈值 + 24h 节流 |
 
 ---
 
@@ -107,6 +110,11 @@ python tools/path_audit.py --config examples/platforms/bilibili_audit.yaml
 # 只跑几条 / 强制开浏览器：
 python tools/path_audit.py --config examples/platforms/bilibili_audit.yaml \
     --only anonymous_json,ssr_state --browser always
+
+# 17) 平台健康体检（改版静默失效的例行检查，FAIL 退出码 1）
+ack-health --init                                  # 生成配置模板
+ack-health --config ack_health.yaml                # 静态体检（秒级）
+ack-health --config ack_health.yaml --browser      # + 免登录动态探针
 ```
 
 不想安装成包也能跑：所有示例和工具都会自动把 `src/` 加进 `sys.path`。
@@ -163,7 +171,10 @@ browser-automation-kit/
 │  ├─ text.py                   # 计数归一 / 水印清洗 / 去重键
 │  ├─ resources.py              # 资源拦截（有明确使用边界）
 │  ├─ http_signed.py            # ★ 带签名接口规格（契约，不内置算法）
-│  ├─ run_report.py             # ★ 可判定的运行报告（成功率/覆盖率/耗时）
+│  ├─ run_report.py             # ★ 可判定的运行报告（empty / 覆盖率 / 降级原因）
+│  ├─ health.py                 # ★ 平台健康体检（注册表 + 入口 + 登录判据 + 探针）
+│  ├─ profile_cache.py          # ★ profile 缓存治理（白名单 + 双阈值 + 节流）
+│  ├─ console.py                # ★ GBK 控制台兜底 + 日志脱敏
 │  └─ tools/                    # 探测与评测的库实现（随包安装）
 ├─ examples/                    # 15 个可运行示例
 ├─ tools/                       # 兼容入口（实现在 src/anti_crawl_kit/tools/）
@@ -172,6 +183,7 @@ browser-automation-kit/
 │  ├─ js_api_hunt.py            # ★ 从 JS 包找接口（全量 chunk / baseURL / 字段名）
 │  ├─ bench.py                  # ★ curl_cffi vs patchright 最小评测
 │  ├─ path_audit.py             # ★ 14 条路径全量审计（矩阵 + 评分卡 + 选型卡）
+│  ├─ health.py                 # ★ 平台健康体检（ack-health）
 │  └─ detector_check.py         # 反检测自检（sannysoft/rebrowser/creepjs）
 ├─ scripts/
 │  └─ gen_requirements.py       # 从 pyproject 生成 requirements（单一来源）
@@ -305,6 +317,7 @@ python examples/07_config_driven.py examples/platforms/新平台.yaml --out outp
 | [21-站点形态实测](docs/21-站点形态实测.md) | 43 站实测：SSR / 状态容器 / SPA / 登录墙 / WAF |
 | [22-登录态与签名剥离](docs/22-登录态与签名剥离.md) | 浏览器能跑但 HTTP 不行、ID/字段/错误码对不上 |
 | [23-平台路径全量审计](docs/23-平台路径全量审计.md) | 要测所有路径、比较方案、选生产最优 |
+| [24-健康体检与静默失效](docs/24-健康体检与静默失效.md) | 任务「成功」但 0 条、改版静默失效、profile 膨胀 |
 
 ---
 

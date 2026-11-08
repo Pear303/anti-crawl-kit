@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # 符号 → 子模块（PEP 562 惰性导出）
 _LAZY: dict[str, str] = {
@@ -112,6 +112,25 @@ _LAZY: dict[str, str] = {
     "run_audit": ".tools.path_audit",
     "score_path": ".tools.path_audit",
     "recommend": ".tools.path_audit",
+    # ── v0.3.0：静默失效 / 健康体检 / 缓存治理 / 控制台兜底 ──
+    "CheckResult": ".health",
+    "HealthReport": ".health",
+    "HealthStatus": ".health",
+    "HealthTarget": ".health",
+    "run_static_health_checks": ".health",
+    "PruneResult": ".profile_cache",
+    "prune_profile_cache": ".profile_cache",
+    "PlatformSpecRegistry": ".platform_spec",
+    "SpecConsistencyError": ".platform_spec",
+    "check_derived_consistency": ".platform_spec",
+    "derived_view": ".platform_spec",
+    "validate_spec": ".platform_spec",
+    "WaitReason": ".waiting",
+    "classify_wait_outcome": ".waiting",
+    "install_safe_print": ".console",
+    "redact_mapping": ".console",
+    "redact_secrets": ".console",
+    "safe_print": ".console",
 }
 
 __all__ = [
@@ -202,6 +221,25 @@ __all__ = [
     "run_audit",
     "score_path",
     "recommend",
+    # ── v0.3.0 ──
+    "CheckResult",
+    "HealthReport",
+    "HealthStatus",
+    "HealthTarget",
+    "run_static_health_checks",
+    "PruneResult",
+    "prune_profile_cache",
+    "PlatformSpecRegistry",
+    "SpecConsistencyError",
+    "check_derived_consistency",
+    "derived_view",
+    "validate_spec",
+    "WaitReason",
+    "classify_wait_outcome",
+    "install_safe_print",
+    "redact_mapping",
+    "redact_secrets",
+    "safe_print",
 ]
 
 

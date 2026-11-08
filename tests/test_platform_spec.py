@@ -5,6 +5,8 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from anti_crawl_kit.platform_spec import (
@@ -12,11 +14,16 @@ from anti_crawl_kit.platform_spec import (
     CookieState,
     IdentityState,
     PlatformCapability,
+    PlatformSpecRegistry,
+    SpecConsistencyError,
+    check_derived_consistency,
     check_identity,
     cookie_expired,
+    derived_view,
     eval_cookie_state,
     normalize_handle,
     should_block_task,
+    validate_spec,
 )
 
 
@@ -164,3 +171,101 @@ def test_platform_capability_roundtrip():
     assert data["platform"] == "demo"
     assert data["auth_cookies"] == ["sessionid"]
     assert data["known_unavailable"]["play_count"] == "不提供"
+
+
+# ── v0.3.0：单一来源 + 派生一致性 ──────────────────────
+def _full_spec() -> PlatformCapability:
+    return PlatformCapability(
+        platform="demo",
+        supports_login=True,
+        auth_cookies=("sessionid", "sid_tt"),
+        collector_module="mypkg.collectors.demo",
+        collector_class="DemoCollector",
+        entry_param="uid",
+        qrcode_selector=".qrcode img",
+        publisher_module="mypkg.publishers.demo",
+        publisher_class="DemoPublisher",
+        supports_text_publish=True,
+        publish_url="https://demo.example.com/publish",
+    )
+
+
+def test_validate_spec_passes() -> None:
+    assert validate_spec(_full_spec()) == []
+
+
+def test_validate_spec_flags_missing_entry_param() -> None:
+    spec = PlatformCapability(
+        platform="demo",
+        collector_module="mypkg.collectors.demo",
+        collector_class="DemoCollector",
+    )
+    issues = validate_spec(spec)
+    assert any("entry_param" in item for item in issues)
+
+
+def test_validate_spec_flags_login_without_cookies() -> None:
+    spec = PlatformCapability(platform="demo", supports_login=True)
+    issues = validate_spec(spec)
+    assert any("auth_cookies" in item for item in issues)
+
+
+def test_validate_spec_flags_bad_selector_type() -> None:
+    spec = PlatformCapability(
+        platform="demo", qrcode_selector=".qr", qrcode_selector_type="xpath"
+    )
+    assert any("qrcode_selector_type" in item for item in validate_spec(spec))
+
+
+def test_derived_view_is_canonical() -> None:
+    view = derived_view(_full_spec())
+    assert view["auth_cookies"] == ("sessionid", "sid_tt")
+    assert view["entry_param"] == ("uid",)
+    assert view["publish_url"] == ("https://demo.example.com/publish",)
+
+
+def test_check_derived_consistency_pass() -> None:
+    issues = check_derived_consistency(
+        _full_spec(),
+        {
+            "auth_cookies": {
+                "python": ["sessionid", "sid_tt"],
+                "javascript": ["sid_tt", "sessionid"],
+            },
+            "entry_param": ["uid"],
+        },
+    )
+    assert issues == []
+
+
+def test_check_derived_consistency_detects_drift() -> None:
+    issues = check_derived_consistency(
+        _full_spec(),
+        {"auth_cookies": {"javascript": ["sessionid"]}},
+    )
+    assert issues and "sid_tt" in issues[0]
+
+
+def test_registry_rejects_duplicate() -> None:
+    registry = PlatformSpecRegistry([_full_spec()])
+    with pytest.raises(ValueError, match="重复注册"):
+        registry.register(_full_spec())
+
+
+def test_registry_consistency_and_fingerprint() -> None:
+    registry = PlatformSpecRegistry([_full_spec()])
+    assert registry.platforms() == ["demo"]
+    assert registry.consistency_issues() == []
+    first = registry.fingerprint()
+
+    changed = PlatformCapability(
+        **{**_full_spec().__dict__, "entry_param": "user_id"}
+    )
+    registry2 = PlatformSpecRegistry([changed])
+    assert registry2.fingerprint() != first
+
+
+def test_registry_assert_consistent_raises() -> None:
+    registry = PlatformSpecRegistry([_full_spec()])
+    with pytest.raises(SpecConsistencyError):
+        registry.assert_consistent({"demo": {"entry_param": ["user_id"]}})
