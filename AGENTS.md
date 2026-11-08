@@ -231,11 +231,15 @@ agent 手写能解决就手写，但不要裸 `requests`。
 
 - Python 3.10+
 - 系统 Chrome（或用 `channel="msedge"`）
-- `pip install -r requirements.txt`
+- 安装：`pip install -e ".[all,dev]"`（全部能力 + 测试）
+  - 纯逻辑：`pip install -e ".[dev]"`（不装 patchright / curl_cffi）
+  - 按需：`pip install -e ".[browser]"` / `".[http]"` / `".[config]"`
+- `requirements.txt` 由 `scripts/gen_requirements.py` 生成，勿手改
 - 临时文件用 `C:\Windows\Temp\opencode`
 
 ```bash
-python -m pytest tests -q     # 应全绿
+python -m pytest tests -q             # 离线测试，应全绿
+$env:ACK_BROWSER="1"; python -m pytest tests -m browser -q   # 浏览器集成（手动）
 python examples/01_hello_browser.py   # 自检
 ```
 
