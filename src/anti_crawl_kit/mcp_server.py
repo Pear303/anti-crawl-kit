@@ -38,6 +38,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 
 from .console import redact_mapping
+from .browser_pool import BrowserPool
 from .recipe import (
     Recipe,
     list_recipes as _list_recipes,
@@ -173,12 +174,17 @@ class ToolService:
         browser_factory: Callable[[], Any] | None = None,
         recipes_dir: str | Path | None = None,
         max_workers: int = 2,
+        max_browser_sessions: int = 2,
+        browser_idle_ttl: float = 600.0,
     ) -> None:
         self.allow_hosts = tuple(host for host in allow_hosts if host)
         self._http_client = http_client
         self._browser_factory = browser_factory
         self.recipes_dir = Path(recipes_dir) if recipes_dir else Path.cwd() / "recipes"
         self.jobs = JobManager(max_workers=max_workers)
+        self._browser_pool: BrowserPool | None = None
+        self._max_browser_sessions = max(1, max_browser_sessions)
+        self._browser_idle_ttl = browser_idle_ttl
 
     # ── 基础设施 ──
     def _client(self):
@@ -191,9 +197,18 @@ class ToolService:
     def _browser_cm(self):
         if self._browser_factory is not None:
             return self._browser_factory()
-        from .session import BrowserSession
+        if self._browser_pool is None:
+            self._browser_pool = BrowserPool(
+                max_sessions=self._max_browser_sessions,
+                headless=True,
+                idle_ttl=self._browser_idle_ttl,
+            )
+        return self._browser_pool.lease()
 
-        return BrowserSession(headless=True, skip_version_check=True)
+    def close(self) -> None:
+        """关闭当前线程的 browser（server 退出时调用）。"""
+        if self._browser_pool is not None:
+            self._browser_pool.shutdown()
 
     def _check(self, url: str, allow_hosts: tuple[str, ...] | None = None) -> None:
         _check_host(url, allow_hosts if allow_hosts is not None else self.allow_hosts)
@@ -238,6 +253,11 @@ class ToolService:
                     "yaml": has("yaml"),
                     "mcp": has("mcp"),
                 },
+                "browser_pool": (
+                    self._browser_pool.stats()
+                    if self._browser_pool is not None
+                    else {"started": False, "max_sessions": self._max_browser_sessions}
+                ),
                 "job_concurrency": 2,
             }
         )
@@ -903,11 +923,17 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.transport == "stdio":
-        server.run()
+        try:
+            server.run()
+        finally:
+            service.close()
     else:
         server.settings.host = args.host
         server.settings.port = args.port
-        server.run(transport="streamable-http")
+        try:
+            server.run(transport="streamable-http")
+        finally:
+            service.close()
     return 0
 
 

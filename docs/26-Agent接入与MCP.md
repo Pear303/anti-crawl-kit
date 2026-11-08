@@ -214,6 +214,44 @@ ack-mcp --recipes-dir ./recipes
 
 环境变量 `ACK_MCP_ALLOWED_HOSTS` 等价于 `--allow-hosts`；为空表示不限制（**仅建议本地开发**）。
 
+### 5.1 浏览器会话池（`v0.6.0`）
+
+MCP 连续调用不再每次启动 Chrome。`BrowserPool` 的策略：
+
+- **同一线程复用 browser**，每次 `lease()` 新建 `BrowserContext + Page`；
+- context 隔离 cookie / localStorage / IndexedDB，租约结束关闭；
+- `max_sessions` 限制并发浏览器进程数；
+- `idle_ttl` 到期或 browser 断连时自动重建；
+- **线程亲和性**：patchright sync API 不能跨线程使用，所以 browser 按线程持有，
+  不跨线程共享（这是驱动限制，不是设计取舍）。
+
+实测（本机，Windows / Chrome 156）：
+
+```text
+冷启动 BrowserSession       1290 ~ 1455 ms
+池化后 lease（非首次）        159 ~ 183 ms
+首次 lease（含启动）          964 ms
+
+MCP 连续两次 with_browser：
+  sessions_created=1, sessions_reused=1, leases=2
+```
+
+用法：
+
+```python
+from anti_crawl_kit.browser_pool import BrowserPool
+
+pool = BrowserPool(max_sessions=2)
+with pool.lease() as page:
+    page.goto("https://books.toscrape.com/")
+# 第二次：browser 复用，只新建 context
+with pool.lease() as page:
+    ...
+pool.shutdown()
+```
+
+边界：需要登录态的持久化 profile 不适用本池，仍用 `BrowserSession(data_dir=...)`。
+
 ---
 
 ## 6. 安全边界
@@ -259,8 +297,8 @@ resume_recipe({"selector": "div.quote"}, with_browser=True)
 ## 8. 限制与后续
 
 - 作业队列在内存，重启丢失；需要持久化可接 Redis/SQLite。
-- 浏览器会话没有池化；每次 `with_browser=True` 都新建会话（3~5s 启动成本）。
-  后续可加 warm session pool。
+- 浏览器池按线程持有 browser，无法跨线程共享（patchright sync 限制）；
+  需要登录态的场景仍用 `BrowserSession(data_dir=...)`。
 - `hunt_api` 是同步慢调用（5~60s）；大批量建议走 job。
 - recipe 的 `when` 不支持函数调用，复杂逻辑请封装成 `register_step`。
 - MCP 的 HTTP 传输目前没有内置鉴权；远程部署请放在反向代理 + token 后面。

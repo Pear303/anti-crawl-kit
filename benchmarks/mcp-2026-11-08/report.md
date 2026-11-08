@@ -47,7 +47,28 @@ resume_recipe({"selector": "div.quote"}, with_browser=True)
   -> browser_count=10
 ```
 
-## 4. 结论
+## 5. 浏览器会话池
+
+MCP 连续调用复用同一个 browser，每次租约新建隔离 context。
+
+| 指标 | 冷启动 `BrowserSession` | 池化 `lease()`（非首次） |
+|---|---|---|
+| 耗时 | 1290~1455 ms | 159~183 ms |
+| browser 启动 | 每次 | 仅首次 |
+| cookie 隔离 | 新进程 | 新 context |
+
+MCP 连续两次 `with_browser=True`：
+
+```text
+sessions_created=1, sessions_reused=1, leases=2, contexts_created=2
+```
+
+边界：按线程持有 browser（patchright sync API 线程亲和）；需要登录态 profile
+仍用 `BrowserSession(data_dir=...)`。
+
+---
+
+## 6. 结论
 
 - MCP 层能正确暴露工具、资源、提示词，调用结果可 JSON 解析。
 - recipe 的确定性步骤（HTTP → 分类 → 空壳 → 计数 → 断言）真实跑通。

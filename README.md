@@ -36,6 +36,7 @@
 | profile 涨到几个 GB、登录窗卡死 | `prune_profile_cache()`：白名单 + 双阈值 + 24h 节流 |
 | 发版前不知道真实链路是否可用 | `ack-smoke`：9 条真实站点用例 + 负向控制，FAIL 退出码 1 |
 | agent 不想记命令行 / 要直接调能力 | `ack-mcp`：14 个 MCP 工具 + 3 个 prompt + 4 个 resource |
+| MCP 连续调用每次重启浏览器 | `BrowserPool`：复用 browser，租约隔离 context |
 
 ---
 
@@ -188,6 +189,7 @@ browser-automation-kit/
 │  ├─ console.py                # ★ GBK 控制台兜底 + 日志脱敏
 │  ├─ smoke.py                  # ★ 真实站点冒烟（8 类链路 + 负向控制）
 │  ├─ recipe.py                 # ★ 确定性骨架 + agent 检查点（handoff/resume）
+│  ├─ browser_pool.py          # ★ 浏览器会话池（复用 browser，隔离 context）
 │  ├─ mcp_server.py             # ★ MCP server（14 tools + prompts + resources）
 │  └─ tools/                    # 探测与评测的库实现（随包安装）
 ├─ examples/                    # 15 个可运行示例 + recipes/ 配方
