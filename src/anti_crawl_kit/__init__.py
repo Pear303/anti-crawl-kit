@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 # 符号 → 子模块（PEP 562 惰性导出）
 _LAZY: dict[str, str] = {
@@ -149,6 +149,23 @@ _LAZY: dict[str, str] = {
     "run_recipe": ".recipe",
     "validate_recipe": ".recipe",
     "ToolService": ".mcp_server",
+    # ── v0.7.0：G2/G3/G4 ──
+    "DataContract": ".data_contract",
+    "FieldSpec": ".data_contract",
+    "ContractResult": ".data_contract",
+    "IncrementalPolicy": ".data_contract",
+    "IncrementalResult": ".data_contract",
+    "check_incremental": ".data_contract",
+    "validate_data": ".data_contract",
+    "StabilityCase": ".stability",
+    "StabilityResult": ".stability",
+    "run_stability": ".stability",
+    "Assessment": ".assess",
+    "AssessmentConfig": ".assess",
+    "assess": ".assess",
+    "load_assessment_config": ".assess",
+    "count_matches": ".dom_extract",
+    "extract_records": ".dom_extract",
 }
 
 __all__ = [
@@ -276,6 +293,23 @@ __all__ = [
     "run_recipe",
     "validate_recipe",
     "ToolService",
+    # ── v0.7.0 ──
+    "DataContract",
+    "FieldSpec",
+    "ContractResult",
+    "IncrementalPolicy",
+    "IncrementalResult",
+    "check_incremental",
+    "validate_data",
+    "StabilityCase",
+    "StabilityResult",
+    "run_stability",
+    "Assessment",
+    "AssessmentConfig",
+    "assess",
+    "load_assessment_config",
+    "count_matches",
+    "extract_records",
 ]
 
 

@@ -1,0 +1,158 @@
+{
+  "platform": "books-health",
+  "url": "https://books.toscrape.com/",
+  "started_at": "2026-11-08 17:01:49",
+  "finished_at": "2026-11-08 17:01:56",
+  "decision": "conditional_go",
+  "score": 80,
+  "gaps": [
+    "路径审计未配置：补 audit YAML（14 条路径）",
+    "增量未验证：当前 mode=full（需要游标字段/两次真实增量样本）"
+  ],
+  "next_actions": [
+    "补 audit YAML，跑 ack-path / path_audit",
+    "提供游标字段或两次增量样本，把 mode 改为 incremental"
+  ],
+  "gates": [
+    {
+      "gate": "G0",
+      "name": "形态",
+      "status": "PASS",
+      "summary": "shape=ssr empty=False states=[]",
+      "evidence": {
+        "status": 200,
+        "bytes": 51274,
+        "shape": "ssr",
+        "advice": "数据在 HTML，直接解析，不要开浏览器。",
+        "is_empty": false,
+        "empty_reasons": [],
+        "states": [],
+        "scripts": 7
+      },
+      "gaps": [],
+      "elapsed_ms": 1523
+    },
+    {
+      "gate": "G1",
+      "name": "路径",
+      "status": "SKIP",
+      "summary": "未配置 path_audit",
+      "evidence": {},
+      "gaps": [
+        "路径审计未配置：补 audit YAML（14 条路径）"
+      ],
+      "elapsed_ms": 0
+    },
+    {
+      "gate": "G2",
+      "name": "数据",
+      "status": "PASS",
+      "summary": "20 条 / 去重后 20 / 重复率 0.0% / 新增 0",
+      "evidence": {
+        "items": {
+          "ok": true,
+          "total": 20,
+          "unique": 20,
+          "duplicate_ratio": 0.0,
+          "missing": {},
+          "missing_ratio": {},
+          "type_errors": [],
+          "pattern_errors": [],
+          "issues": []
+        },
+        "incremental": {
+          "ok": true,
+          "previous": 20,
+          "current": 20,
+          "overlap": 20,
+          "new": 0,
+          "overlap_ratio": 1.0,
+          "new_ratio": 0.0,
+          "issues": []
+        },
+        "sample": [
+          {
+            "title": "A Light in the Attic",
+            "price": "£51.77"
+          },
+          {
+            "title": "Tipping the Velvet",
+            "price": "£53.74"
+          },
+          {
+            "title": "Soumission",
+            "price": "£50.10"
+          }
+        ]
+      },
+      "gaps": [
+        "增量未验证：当前 mode=full（需要游标字段/两次真实增量样本）"
+      ],
+      "elapsed_ms": 0
+    },
+    {
+      "gate": "G3",
+      "name": "稳定",
+      "status": "PASS",
+      "summary": "2/2 成功，counts=[20, 20]，blocked=0",
+      "evidence": {
+        "name": "books-health",
+        "ok": true,
+        "runs": 2,
+        "success": 2,
+        "success_rate": 1.0,
+        "counts": [
+          20,
+          20
+        ],
+        "latencies_ms": [
+          1277,
+          1311
+        ],
+        "median_count": 20.0,
+        "count_stable": true,
+        "blocked": 0,
+        "issues": [],
+        "samples": [
+          {
+            "index": 0,
+            "ok": true,
+            "status": 200,
+            "count": 20,
+            "latency_ms": 1277,
+            "blocked": false,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "ok": true,
+            "status": 200,
+            "count": 20,
+            "latency_ms": 1311,
+            "blocked": false,
+            "error": ""
+          }
+        ]
+      },
+      "gaps": [],
+      "elapsed_ms": 0
+    },
+    {
+      "gate": "G4",
+      "name": "工程",
+      "status": "PASS",
+      "summary": "体检通过，MCP 可用",
+      "evidence": {
+        "mcp": true,
+        "health": {
+          "OK": 5,
+          "WARN": 0,
+          "FAIL": 0,
+          "SKIP": 0
+        }
+      },
+      "gaps": [],
+      "elapsed_ms": 0
+    }
+  ]
+}

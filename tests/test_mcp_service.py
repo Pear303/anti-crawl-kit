@@ -99,6 +99,7 @@ def test_list_capabilities() -> None:
     service = _service({})
     data = service.list_capabilities()
     assert "probe_url" in data["tools"]
+    assert "assess_project" in data["tools"]
     assert "http_get" in data["steps"]
     assert "curl_cffi" in data["optional_deps"]
 
@@ -218,3 +219,46 @@ def test_prune_profile_cache_via_service(tmp_path: Path) -> None:
     )
     assert result["reason"] == "pruned"
     assert (profile / "Default/Network/Cookies").exists()
+
+
+def test_assess_project_job(tmp_path: Path, monkeypatch) -> None:
+    from anti_crawl_kit import assess as assess_module
+
+    monkeypatch.setattr(
+        assess_module, "_default_fetch", lambda url: (200, SSR_HTML, "")
+    )
+    config = {
+        "platform": "demo",
+        "url": "https://example.com/",
+        "item_selector": "div.item",
+        "field_selectors": {"title": {"selector": ".name"}},
+        "contract": {
+            "name": "demo",
+            "id_field": "title",
+            "min_items": 1,
+            "fields": {"title": {"type": "string"}},
+        },
+        "runs": 2,
+        "interval_ms": 0,
+        "audit_config": "",
+    }
+    html = "".join(
+        f'<div class="item"><span class="name">n{i}</span></div>' for i in range(3)
+    )
+    monkeypatch.setattr(
+        assess_module, "_default_fetch", lambda url: (200, html, "")
+    )
+    path = tmp_path / "assess.json"
+    path.write_text(json.dumps(config), encoding="utf-8")
+
+    service = _service({})
+    job_id = service.assess_project(str(path), out_dir=str(tmp_path / "out"))
+    for _ in range(200):
+        job = service.get_job(job_id)
+        if job["status"] in ("done", "failed"):
+            break
+        time.sleep(0.01)
+    result = service.get_job_result(job_id)
+    assert job["status"] == "done", result.get("error")
+    assert result["result"]["decision"] in ("go", "conditional_go", "no_go")
+    assert (tmp_path / "out" / "assessment.json").exists()

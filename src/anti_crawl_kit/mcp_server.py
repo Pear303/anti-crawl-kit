@@ -240,6 +240,7 @@ class ToolService:
                     "run_recipe",
                     "resume_recipe",
                     "list_recipes",
+                    "assess_project",
                     "get_job",
                     "get_job_result",
                     "list_capabilities",
@@ -562,6 +563,35 @@ class ToolService:
             {"directory": str(root), "count": len(rows), "recipes": rows}
         )
 
+    def assess_project(
+        self,
+        config_path: str,
+        *,
+        out_dir: str = "",
+        no_audit: bool = False,
+    ) -> str:
+        """启动 G0~G4 技术验证评估（返回 job_id）。"""
+        def _run() -> dict[str, Any]:
+            from dataclasses import replace
+
+            from .assess import assess, load_assessment_config
+
+            config = load_assessment_config(config_path)
+            if no_audit:
+                config = replace(config, audit_config="")
+            target = out_dir or str(Path("runs") / f"assessment-{config.platform}")
+            report = assess(config, out_dir=target)
+            report.write(target)
+            data = report.to_dict()
+            data["exit_code"] = (
+                0 if report.decision in ("go", "conditional_go") else 1
+            )
+            return redact_mapping(data)
+
+        return self.jobs.submit(
+            "assess_project", _run, config_path=config_path, no_audit=no_audit
+        )
+
     # ── 辅助 ──
     @staticmethod
     def _cookies(cookie_env: str) -> dict[str, str]:
@@ -854,6 +884,19 @@ def create_server(service: ToolService | None = None):
     def list_recipes(directory: str = "") -> dict:
         """列出可用 recipe（id / title / steps / 是否通过校验）。"""
         return service.list_recipes(directory)
+
+    @mcp.tool()
+    def assess_project(
+        config_path: str,
+        out_dir: str = "",
+        no_audit: bool = False,
+    ) -> dict:
+        """启动 G0~G4 技术验证评估，返回 job_id；用 get_job_result 取 Go/No-Go。"""
+        return {
+            "job_id": service.assess_project(
+                config_path, out_dir=out_dir, no_audit=no_audit
+            )
+        }
 
     @mcp.resource("ack://guide/decisions")
     def decisions_guide() -> str:

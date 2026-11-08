@@ -1,0 +1,15 @@
+platform: books
+test_url: https://books.toscrape.com/
+skip_version_check: true
+card_selector: article.product_pod
+dom_fields:
+  title:
+    selector: "h3 a"
+    attr: title
+  price:
+    selector: "p.price_color"
+    attr: text
+field_semantics:
+  title: 书名
+  price: 价格（含 £ 符号）
+notes: 公开练习站；只用于验证 path_audit 链路，不代表任何真实平台

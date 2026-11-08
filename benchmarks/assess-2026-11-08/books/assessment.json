@@ -1,0 +1,258 @@
+{
+  "platform": "books",
+  "url": "https://books.toscrape.com/",
+  "started_at": "2026-11-08 16:59:40",
+  "finished_at": "2026-11-08 17:00:16",
+  "decision": "conditional_go",
+  "score": 85,
+  "gaps": [
+    "单次审计不能下生产可用结论；需要双跑 + 不同时段复测",
+    "增量未验证：当前 mode=full（需要游标字段/两次真实增量样本）",
+    "健康体检未配置：补 ack_health.yaml（注册表/入口/cookie/选择器）"
+  ],
+  "next_actions": [
+    "提供游标字段或两次增量样本，把 mode 改为 incremental",
+    "补 ack_health.yaml，跑 ack-health"
+  ],
+  "gates": [
+    {
+      "gate": "G0",
+      "name": "形态",
+      "status": "PASS",
+      "summary": "shape=ssr empty=False states=[]",
+      "evidence": {
+        "status": 200,
+        "bytes": 51274,
+        "shape": "ssr",
+        "advice": "数据在 HTML，直接解析，不要开浏览器。",
+        "is_empty": false,
+        "empty_reasons": [],
+        "states": [],
+        "scripts": 7
+      },
+      "gaps": [],
+      "elapsed_ms": 1239
+    },
+    {
+      "gate": "G1",
+      "name": "路径",
+      "status": "WARN",
+      "summary": "已测 2 条，成功 2 条",
+      "evidence": {
+        "tested": 2,
+        "ok": 2,
+        "success_rate": 1.0,
+        "status": "ok",
+        "hard_stop": "",
+        "paths": [
+          {
+            "path": "anonymous_html",
+            "status": 200,
+            "stop_reason": "completed",
+            "latency_ms": 1054
+          },
+          {
+            "path": "anonymous_json",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "anonymous_graphql",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "mobile_api",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "share_ssr",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "ssr_state",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "js_bundle",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "login_http",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "browser_xhr",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "signature_replay",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "open_platform",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "app_api",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          },
+          {
+            "path": "dom",
+            "status": 200,
+            "stop_reason": "completed",
+            "latency_ms": 27948
+          },
+          {
+            "path": "ocr",
+            "status": 0,
+            "stop_reason": "not_tested",
+            "latency_ms": 0
+          }
+        ]
+      },
+      "gaps": [
+        "单次审计不能下生产可用结论；需要双跑 + 不同时段复测"
+      ],
+      "elapsed_ms": 0
+    },
+    {
+      "gate": "G2",
+      "name": "数据",
+      "status": "PASS",
+      "summary": "20 条 / 去重后 20 / 重复率 0.0% / 新增 0",
+      "evidence": {
+        "items": {
+          "ok": true,
+          "total": 20,
+          "unique": 20,
+          "duplicate_ratio": 0.0,
+          "missing": {},
+          "missing_ratio": {},
+          "type_errors": [],
+          "pattern_errors": [],
+          "issues": []
+        },
+        "incremental": {
+          "ok": true,
+          "previous": 20,
+          "current": 20,
+          "overlap": 20,
+          "new": 0,
+          "overlap_ratio": 1.0,
+          "new_ratio": 0.0,
+          "issues": []
+        },
+        "sample": [
+          {
+            "title": "A Light in the Attic",
+            "price": "£51.77"
+          },
+          {
+            "title": "Tipping the Velvet",
+            "price": "£53.74"
+          },
+          {
+            "title": "Soumission",
+            "price": "£50.10"
+          }
+        ]
+      },
+      "gaps": [
+        "增量未验证：当前 mode=full（需要游标字段/两次真实增量样本）"
+      ],
+      "elapsed_ms": 0
+    },
+    {
+      "gate": "G3",
+      "name": "稳定",
+      "status": "PASS",
+      "summary": "3/3 成功，counts=[20, 20, 20]，blocked=0",
+      "evidence": {
+        "name": "books",
+        "ok": true,
+        "runs": 3,
+        "success": 3,
+        "success_rate": 1.0,
+        "counts": [
+          20,
+          20,
+          20
+        ],
+        "latencies_ms": [
+          2888,
+          1031,
+          2005
+        ],
+        "median_count": 20.0,
+        "count_stable": true,
+        "blocked": 0,
+        "issues": [],
+        "samples": [
+          {
+            "index": 0,
+            "ok": true,
+            "status": 200,
+            "count": 20,
+            "latency_ms": 2888,
+            "blocked": false,
+            "error": ""
+          },
+          {
+            "index": 1,
+            "ok": true,
+            "status": 200,
+            "count": 20,
+            "latency_ms": 1031,
+            "blocked": false,
+            "error": ""
+          },
+          {
+            "index": 2,
+            "ok": true,
+            "status": 200,
+            "count": 20,
+            "latency_ms": 2005,
+            "blocked": false,
+            "error": ""
+          }
+        ]
+      },
+      "gaps": [],
+      "elapsed_ms": 0
+    },
+    {
+      "gate": "G4",
+      "name": "工程",
+      "status": "WARN",
+      "summary": "未配置 health_config",
+      "evidence": {
+        "mcp": true
+      },
+      "gaps": [
+        "健康体检未配置：补 ack_health.yaml（注册表/入口/cookie/选择器）"
+      ],
+      "elapsed_ms": 0
+    }
+  ]
+}

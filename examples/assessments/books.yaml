@@ -1,0 +1,47 @@
+# G0~G4 技术验证配置：books.toscrape.com
+# 公开练习站，允许抓取；用于验证评估链路本身。
+platform: books
+url: https://books.toscrape.com/
+notes: 公开练习站（静态 SSR，20 条/页）
+
+item_selector: article.product_pod
+field_selectors:
+  title:
+    selector: "h3 a"
+    attr: title
+  price:
+    selector: "p.price_color"
+
+contract:
+  name: books
+  id_field: title
+  min_items: 20
+  max_duplicate_ratio: 0.0
+  max_missing_ratio: 0.0
+  fields:
+    title:
+      type: string
+      required: true
+      min_len: 2
+    price:
+      type: string
+      required: true
+      pattern: "^£"
+
+incremental:
+  mode: full          # 静态整页列表，允许全量重叠
+  max_overlap_ratio: 1.0
+
+runs: 3
+concurrency: 2
+interval_ms: 300
+min_success_rate: 1.0
+count_tolerance: 0.1
+
+# G1：路径审计（只跑两条，避免评估太慢）
+audit_config: ../platforms/books_assessment.yaml
+audit_only: [anonymous_html, dom]
+
+# G4：健康体检。练习站没有采集器模块，留空 → G4 WARN
+health_config: ""
+module_root: ""

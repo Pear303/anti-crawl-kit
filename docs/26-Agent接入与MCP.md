@@ -168,6 +168,7 @@ def my_platform_parse(params, runtime):
 | `list_recipes` | 同步 | 列出配方 |
 | `smoke_test` | **异步** | 返回 `job_id` |
 | `audit_paths` | **异步** | 返回 `job_id` |
+| `assess_project` | **异步** | G0~G4 评估，返回 `job_id` |
 | `get_job` | 同步 | 查作业状态 |
 | `get_job_result` | 同步 | 取完整结果 |
 | `list_capabilities` | 同步 | 工具/步骤/依赖/白名单 |
@@ -275,7 +276,7 @@ pool.shutdown()
 用官方 `mcp` client 通过 stdio 验证：
 
 ```text
-TOOLS: 14 个
+TOOLS: 15 个
 PROMPTS: 3 个
 RESOURCES: 4 个
 probe_url(books.toscrape.com)  -> decision=parse_html, status=200

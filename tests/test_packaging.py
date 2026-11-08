@@ -96,6 +96,7 @@ def test_cli_entry_points_declared() -> None:
         "ack-health",
         "ack-smoke",
         "ack-mcp",
+        "ack-assess",
     }
     for target in scripts.values():
         module, _, func = target.partition(":")

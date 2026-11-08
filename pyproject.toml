@@ -40,6 +40,7 @@ ack-audit = "anti_crawl_kit.tools.path_audit:main"
 ack-health = "anti_crawl_kit.tools.health_cli:main"
 ack-smoke = "anti_crawl_kit.tools.smoke_cli:main"
 ack-mcp = "anti_crawl_kit.mcp_server:main"
+ack-assess = "anti_crawl_kit.tools.assess_cli:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "anti_crawl_kit.__version__" }
