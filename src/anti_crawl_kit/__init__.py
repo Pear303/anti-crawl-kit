@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # 符号 → 子模块（PEP 562 惰性导出）
 _LAZY: dict[str, str] = {
@@ -105,6 +105,13 @@ _LAZY: dict[str, str] = {
     "spec_from_dict": ".http_signed",
     "RunReport": ".run_report",
     "assert_thresholds": ".run_report",
+    "PathResult": ".tools.path_audit",
+    "AuditConfig": ".tools.path_audit",
+    "AuditRun": ".tools.path_audit",
+    "load_audit_config": ".tools.path_audit",
+    "run_audit": ".tools.path_audit",
+    "score_path": ".tools.path_audit",
+    "recommend": ".tools.path_audit",
 }
 
 __all__ = [
@@ -188,6 +195,13 @@ __all__ = [
     "spec_from_dict",
     "RunReport",
     "assert_thresholds",
+    "PathResult",
+    "AuditConfig",
+    "AuditRun",
+    "load_audit_config",
+    "run_audit",
+    "score_path",
+    "recommend",
 ]
 
 

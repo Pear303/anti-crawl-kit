@@ -33,6 +33,7 @@ ack-hunt = "anti_crawl_kit.tools.js_api_hunt:main"
 ack-dom = "anti_crawl_kit.tools.dom_probe:main"
 ack-detect = "anti_crawl_kit.tools.detector_check:main"
 ack-bench = "anti_crawl_kit.tools.bench:main"
+ack-audit = "anti_crawl_kit.tools.path_audit:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "anti_crawl_kit.__version__" }

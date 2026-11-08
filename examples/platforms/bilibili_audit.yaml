@@ -1,0 +1,131 @@
+# B站路径审计样例（公开账号 uid=2，无需登录）
+#
+# 用法：
+#   python tools/path_audit.py --config examples/platforms/bilibili_audit.yaml
+#   python tools/path_audit.py --config examples/platforms/bilibili_audit.yaml --only anonymous_json,ssr_state
+#
+# 说明：
+#   1. 这里只配置了「已实现探测器」需要的字段；未实现的路径会自动标 not_tested，
+#      并在 audit.md 的「未测路径怎么测」里给出方法。
+#   2. 需要登录态的路径不要往仓库里写 Cookie，用 cookies_env 从环境变量读：
+#        PowerShell: $env:ACK_BILIBILI_COOKIES = "SESSDATA=xxx; bili_jct=xxx"
+#   3. B站可能给接口加 WBI 签名；本工作包不内置算法。真遇到签名时，
+#      把对应路径改成浏览器 XHR，或注册 signer 后走 signature_replay。
+#   4. DOM 选择器会随改版失效，探测结果为空是正常现象，不要据此判断「不可用」。
+
+platform: bilibili
+test_url: https://space.bilibili.com/2
+uid: "2"
+# 分享页 / 公开主页 SSR（路径 5）；没有就留空，该路径会标 not_tested
+share_url: ""
+cookies_env: ACK_BILIBILI_COOKIES
+
+# 字段口径：审计报告与选型卡的硬门槛，缺一条就会被 veto
+field_semantics:
+  followers: "B站 relation.follower（Web 粉丝数）"
+  following: "B站 relation.following（Web 关注数）"
+  works: "B站 navnum.video（投稿视频数）"
+
+# 路径 2：匿名 JSON API / REST
+endpoints:
+  - path: anonymous_json
+    name: relation
+    url: https://api.bilibili.com/x/relation/stat
+    method: GET
+    params:
+      vmid: "{uid}"
+    headers:
+      Referer: "https://space.bilibili.com/{uid}"
+    risk_codes:
+      "-352": captcha
+      "-799": rate_limited
+      "-509": rate_limited
+      "-404": not_found
+    required_fields:
+      - data.follower
+      - data.following
+    fields:
+      followers: data.follower
+      following: data.following
+
+  - path: anonymous_json
+    name: navnum
+    url: https://api.bilibili.com/x/space/navnum
+    method: GET
+    params:
+      mid: "{uid}"
+    headers:
+      Referer: "https://space.bilibili.com/{uid}"
+    risk_codes:
+      "-352": captcha
+      "-799": rate_limited
+    required_fields:
+      - data.video
+    fields:
+      works: data.video
+
+  # 路径 8：登录态 HTTP。配置了 cookies_env 后才会真正跑；
+  # 没有 Cookie 时标 not_tested，不写「不可用」。
+  # - path: login_http
+  #   name: relation_login
+  #   url: https://api.bilibili.com/x/relation/stat
+  #   params: {vmid: "{uid}"}
+  #   headers: {Referer: "https://space.bilibili.com/{uid}"}
+  #   login_required: true
+  #   fields: {followers: data.follower, following: data.following}
+
+  # 路径 3：匿名 GraphQL。有 GraphQL 端点时这样声明：
+  # - path: anonymous_graphql
+  #   name: profile
+  #   url: https://example.com/graphql
+  #   method: POST
+  #   json_data:
+  #     query: "query($id: ID!){ user(id:$id){ followerCount } }"
+  #     variables: {id: "{uid}"}
+  #   fields: {followers: data.user.followerCount}
+
+# 路径 6：SSR 状态容器。B站改版频繁，按实际页面调整。
+state_path: ""
+state_fields: {}
+# 示例：
+# state_fields:
+#   followers: h5SpaceData.follower
+#   following: h5SpaceData.following
+
+# 路径 7：JS 包找接口时想定位的字段名
+js_fields:
+  - follower
+  - following
+  - video
+
+# 路径 9：浏览器 XHR 拦截
+xhr_pattern: "/x/relation/stat"
+xhr_fields:
+  followers: data.follower
+  following: data.following
+
+# 路径 13：DOM 解析（选择器会随改版失效，结果为空是正常现象）
+card_selector: ""
+dom_fields:
+  followers:
+    selector: ".n-fans .n-data-v"
+    attr: text
+  following:
+    selector: ".n-following .n-data-v"
+    attr: text
+  works:
+    selector: ".n-video .n-data-v"
+    attr: text
+
+browser:
+  headless: true
+  # 本机 Chrome 156 / patchright 期望 151，差 5 个大版本。
+  # 审计工具默认尊重红线；这里显式跳过，因为该环境已实测可用。
+  skip_version_check: true
+  wait_ms: 4000
+  xhr_wait_ms: 5000
+  # 需要登录态的浏览器路径：填持久化 profile 目录，不要提交到仓库
+  data_dir: ""
+
+timeout: 20
+max_items: 5

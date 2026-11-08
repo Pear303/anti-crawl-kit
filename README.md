@@ -101,6 +101,12 @@ python examples/15_state_extract.py --live
 
 # 15) 最小评测：这个站 HTTP 够不够？
 python tools/bench.py --repeat 3
+
+# 16) 平台路径全量审计（14 条路径逐条探测 + 评分卡 + 选型卡）
+python tools/path_audit.py --config examples/platforms/bilibili_audit.yaml
+# 只跑几条 / 强制开浏览器：
+python tools/path_audit.py --config examples/platforms/bilibili_audit.yaml \
+    --only anonymous_json,ssr_state --browser always
 ```
 
 不想安装成包也能跑：所有示例和工具都会自动把 `src/` 加进 `sys.path`。
@@ -165,6 +171,7 @@ browser-automation-kit/
 │  ├─ dom_probe.py              # ★ 新平台接入探测（选择器/接口/框架）
 │  ├─ js_api_hunt.py            # ★ 从 JS 包找接口（全量 chunk / baseURL / 字段名）
 │  ├─ bench.py                  # ★ curl_cffi vs patchright 最小评测
+│  ├─ path_audit.py             # ★ 14 条路径全量审计（矩阵 + 评分卡 + 选型卡）
 │  └─ detector_check.py         # 反检测自检（sannysoft/rebrowser/creepjs）
 ├─ scripts/
 │  └─ gen_requirements.py       # 从 pyproject 生成 requirements（单一来源）

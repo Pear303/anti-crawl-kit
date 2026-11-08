@@ -223,7 +223,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 |---|---|---|
 | **库** | `AntiRiskHttpClient`、`ChallengeGate`、`Notifier` | **必须**：补的是手写容易漏、漏了会出事的东西 |
 | **探测工具** | `agent_probe`、`js_api_hunt`、`dom_probe` | **可选**：加速器，agent 手写也行 |
-| **固化脚本** | `scripts/*.py`、`platforms/*.yaml` | **必须**：生产环境不能每次让 LLM 现场生成 |
+| **固化脚本** | `scripts/*.py`、`platforms/*.yaml`、`path_audit` 配置 | **必须**：生产环境不能每次让 LLM 现场生成 |
 
 ---
 
@@ -236,6 +236,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
   - 按需：`pip install -e ".[browser]"` / `".[http]"` / `".[config]"`
 - `requirements.txt` 由 `scripts/gen_requirements.py` 生成，勿手改
 - 临时文件用 `C:\Windows\Temp\opencode`
+- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit`
 
 ```bash
 python -m pytest tests -q             # 离线测试，应全绿

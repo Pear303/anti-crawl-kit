@@ -86,7 +86,14 @@ def test_cli_entry_points_declared() -> None:
 
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     scripts = data["project"]["scripts"]
-    assert set(scripts) == {"ack-probe", "ack-hunt", "ack-dom", "ack-detect", "ack-bench"}
+    assert set(scripts) == {
+        "ack-probe",
+        "ack-hunt",
+        "ack-dom",
+        "ack-detect",
+        "ack-bench",
+        "ack-audit",
+    }
     for target in scripts.values():
         module, _, func = target.partition(":")
         assert module.startswith("anti_crawl_kit.")
