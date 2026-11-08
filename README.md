@@ -34,6 +34,7 @@
 | 任务「成功」但 0 条数据 | `RunReport` 强制 `actual_count=0 → empty`，CI 直接红 |
 | 平台改版靠用户投诉发现 | `ack-health`：静态注册表校验 + 免登录动态探针 |
 | profile 涨到几个 GB、登录窗卡死 | `prune_profile_cache()`：白名单 + 双阈值 + 24h 节流 |
+| 发版前不知道真实链路是否可用 | `ack-smoke`：9 条真实站点用例 + 负向控制，FAIL 退出码 1 |
 
 ---
 
@@ -115,6 +116,10 @@ python tools/path_audit.py --config examples/platforms/bilibili_audit.yaml \
 ack-health --init                                  # 生成配置模板
 ack-health --config ack_health.yaml                # 静态体检（秒级）
 ack-health --config ack_health.yaml --browser      # + 免登录动态探针
+
+# 18) 真实站点冒烟（发行门槛：8 类链路 + 负向控制）
+ack-smoke --json smoke.json
+ack-smoke --no-browser --strict                     # CI：强制要求浏览器用例
 ```
 
 不想安装成包也能跑：所有示例和工具都会自动把 `src/` 加进 `sys.path`。
@@ -175,6 +180,7 @@ browser-automation-kit/
 │  ├─ health.py                 # ★ 平台健康体检（注册表 + 入口 + 登录判据 + 探针）
 │  ├─ profile_cache.py          # ★ profile 缓存治理（白名单 + 双阈值 + 节流）
 │  ├─ console.py                # ★ GBK 控制台兜底 + 日志脱敏
+│  ├─ smoke.py                  # ★ 真实站点冒烟（8 类链路 + 负向控制）
 │  └─ tools/                    # 探测与评测的库实现（随包安装）
 ├─ examples/                    # 15 个可运行示例
 ├─ tools/                       # 兼容入口（实现在 src/anti_crawl_kit/tools/）
@@ -184,6 +190,7 @@ browser-automation-kit/
 │  ├─ bench.py                  # ★ curl_cffi vs patchright 最小评测
 │  ├─ path_audit.py             # ★ 14 条路径全量审计（矩阵 + 评分卡 + 选型卡）
 │  ├─ health.py                 # ★ 平台健康体检（ack-health）
+│  ├─ smoke.py                  # ★ 真实站点冒烟（ack-smoke）
 │  └─ detector_check.py         # 反检测自检（sannysoft/rebrowser/creepjs）
 ├─ scripts/
 │  └─ gen_requirements.py       # 从 pyproject 生成 requirements（单一来源）
@@ -318,6 +325,7 @@ python examples/07_config_driven.py examples/platforms/新平台.yaml --out outp
 | [22-登录态与签名剥离](docs/22-登录态与签名剥离.md) | 浏览器能跑但 HTTP 不行、ID/字段/错误码对不上 |
 | [23-平台路径全量审计](docs/23-平台路径全量审计.md) | 要测所有路径、比较方案、选生产最优 |
 | [24-健康体检与静默失效](docs/24-健康体检与静默失效.md) | 任务「成功」但 0 条、改版静默失效、profile 膨胀 |
+| [25-真实站点冒烟](docs/25-真实站点冒烟.md) | 发版前验证真实链路、负向控制、冒烟矩阵 |
 
 ---
 

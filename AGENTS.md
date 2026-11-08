@@ -179,6 +179,7 @@ tests/               无浏览器冒烟测试
 | 浏览器能跑但 HTTP 不行 / ID 字段对不上 | `docs/22-登录态与签名剥离.md` |
 | 要测所有路径 / 选生产最优 | `docs/23-平台路径全量审计.md` |
 | 任务「成功」但 0 条 / 改版静默失效 | `docs/24-健康体检与静默失效.md` |
+| 发版前真实链路冒烟 / 负向控制 | `docs/25-真实站点冒烟.md` |
 
 ---
 
@@ -217,7 +218,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 3. **每次只改一层。** 同时改选择器和接口，出问题无法归因。
 4. **留下证据。** 截图、HTML、meta、日志，出事能复盘。
 5. **验证墙前认输。** 停 + 通知 + 等人，比硬刚省时间。
-6. **任务成功 ≠ 拿到数据。** `RunReport` 必须带 `actual_count`；`actual_count=0` 一律 `empty`，CI 必须红。新增平台必须跑 `ack-health`。
+6. **任务成功 ≠ 拿到数据。** `RunReport` 必须带 `actual_count`；`actual_count=0` 一律 `empty`，CI 必须红。新增平台必须跑 `ack-health`，发版前必须跑 `ack-smoke`。
 
 ### 什么必须用，什么可选
 
@@ -238,7 +239,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
   - 按需：`pip install -e ".[browser]"` / `".[http]"` / `".[config]"`
 - `requirements.txt` 由 `scripts/gen_requirements.py` 生成，勿手改
 - 临时文件用 `C:\Windows\Temp\opencode`
-- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health`
+- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke`
 
 ```bash
 python -m pytest tests -q             # 离线测试，应全绿

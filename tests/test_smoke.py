@@ -1,131 +1,306 @@
-"""无浏览器冒烟测试 —— 验证纯逻辑模块（不启动 Chrome）。
+"""真实站点冒烟的离线测试（不访问网络，用替身）。"""
 
-运行::
-
-    python -m pytest tests -q
-"""
 from __future__ import annotations
 
-import sys
+import json
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from anti_crawl_kit.generic import FieldSpec, PlatformSpec, _build_extract_js
-from anti_crawl_kit.risk import RiskKind, classify_http_result
-from anti_crawl_kit.strategy import run_strategies
-from anti_crawl_kit.text import (
-    clean_anti_crawl_watermark,
-    clean_html,
-    make_dedupe_key,
-    normalize_count,
-    parse_count,
-    safe_filename,
+from anti_crawl_kit.smoke import (
+    SmokeCase,
+    SmokeKind,
+    SmokeReport,
+    SmokeResult,
+    count_in_html,
+    run_case,
+    run_smoke,
 )
+from anti_crawl_kit.tools import smoke_cli
 
 
-def test_parse_count():
-    assert parse_count("2399.2万") == 23992000
-    assert parse_count("1.2亿") == 120000000
-    assert parse_count("1,234") == 1234
-    assert parse_count("无效") == 0
+class FakeResponse:
+    def __init__(self, status_code: int, text: str) -> None:
+        self.status_code = status_code
+        self.text = text
 
 
-def test_normalize_count():
-    assert normalize_count("2.2万") == 22000
-    assert normalize_count("") is None
-    assert normalize_count("-") is None
-    assert normalize_count("1,093") == 1093
+class FakeClient:
+    def __init__(self, pages: dict[str, str | int]) -> None:
+        self.pages = pages
+        self.calls: list[str] = []
+
+    def get_text(self, url: str, **kwargs) -> FakeResponse:
+        self.calls.append(url)
+        value = self.pages.get(url, (404, ""))
+        if isinstance(value, tuple):
+            status, text = value
+            return FakeResponse(status, text)
+        return FakeResponse(200, value)
 
 
-def test_watermark():
-    raw = "正常文本wordwordwordwordwordmmMwWLliI0fiflO&123\u200b结束"
-    cleaned = clean_anti_crawl_watermark(raw)
-    assert "word" not in cleaned
-    assert "mmMwWLliI0fiflO" not in cleaned
-    assert "\u200b" not in cleaned
-    assert "正常文本" in cleaned and "结束" in cleaned
+class FakePage:
+    def __init__(
+        self,
+        counts: dict[str, int] | None = None,
+        *,
+        url_after: str = "https://www.saucedemo.com/inventory.html",
+        default_count: int = 0,
+    ) -> None:
+        self.counts = counts or {}
+        self.url_after = url_after
+        self.default_count = default_count
+        self.filled: list[tuple[str, str]] = []
+        self.clicked: list[str] = []
+        self.scrolls = 0
+        self.last_nav_metrics = {"goto_ms": 1200, "slow_load": False}
+
+    def goto(self, url: str, wait_until: str = "", timeout: int = 0) -> None:
+        self.url = url
+
+    def evaluate(self, script: str, arg=None, **kwargs):
+        if "querySelectorAll" in script:
+            return self.counts.get(str(arg), self.default_count)
+        if "scrollTo" in script:
+            self.scrolls += 1
+            return 1000
+        if "location.href" in script:
+            return self.url_after
+        return None
+
+    def wait_for_timeout(self, ms: int) -> None:
+        return None
+
+    def fill(self, selector: str, value: str) -> None:
+        self.filled.append((selector, value))
+
+    def click(self, selector: str) -> None:
+        self.clicked.append(selector)
+
+    def wait_for_selector(self, selector: str, timeout: int = 0) -> bool:
+        return True
 
 
-def test_clean_html():
-    assert clean_html("<em>露营</em>&amp;徒步") == "露营&徒步"
-
-
-def test_safe_filename():
-    assert safe_filename('a/b:c*?"<>|') == "a_b_c______"
-    assert safe_filename("", default_name="untitled") == "untitled"
-
-
-def test_dedupe_key():
-    assert make_dedupe_key("bilibili", "BV1xx") == "bilibili:BV1xx"
-    assert (
-        make_dedupe_key("douyin", url="https://www.douyin.com/video/123/?a=1")
-        == "douyin:https://www.douyin.com/video/123"
+def _case(kind: SmokeKind, **overrides) -> SmokeCase:
+    data = dict(
+        name="case",
+        kind=kind,
+        url="https://example.com/",
+        item_selector="div.item",
+        expected_min=10,
     )
-    assert make_dedupe_key("x", keyword="k", title="t", author_external_id="a") == "x:k:a:t"
+    data.update(overrides)
+    return SmokeCase(**data)
 
 
-def test_risk_classify():
-    assert classify_http_result(200, "ok").kind == RiskKind.OK
-    assert classify_http_result(429, "").kind == RiskKind.RATE_LIMITED
-    assert classify_http_result(403, "").should_fallback_to_browser
-    assert classify_http_result(200, "请登录").kind == RiskKind.LOGIN_REQUIRED
-    assert classify_http_result(200, "请输入验证码").kind == RiskKind.CAPTCHA
-    # 正常登录弹窗里的「验证码登录」不是验证码墙
-    assert classify_http_result(200, "验证码登录 密码登录").kind == RiskKind.OK
-    # 短 JSON 登录墙：状态码 200 也要识别
-    assert (
-        classify_http_result(200, '{"ok":-100,"url":"https://x.com/login.php"}').kind
-        == RiskKind.LOGIN_REQUIRED
+# ── HTML 计数 ────────────────────────────────────────
+def test_count_in_html_tag_class() -> None:
+    html = '<article class="product_pod">x</article><article class="other">y</article>'
+    assert count_in_html(html, "article.product_pod") == 1
+    assert count_in_html(html, ".other") == 1
+    assert count_in_html(html, "article") == 2
+
+
+def test_count_in_html_id_and_attr() -> None:
+    html = '<div id="main"></div><a data-test="product-name" href="/product/1"></a>'
+    assert count_in_html(html, "#main") == 1
+    assert count_in_html(html, "[data-test='product-name']") == 1
+    assert count_in_html(html, "a[href*='/product/']") == 1
+
+
+def test_count_in_html_no_match() -> None:
+    assert count_in_html("<div class='quote'></div>", "div.missing") == 0
+
+
+# ── HTTP 用例 ────────────────────────────────────────
+def test_http_static_pass() -> None:
+    client = FakeClient({"https://example.com/": '<div class="item"></div>' * 10})
+    result = run_case(_case(SmokeKind.HTTP_STATIC), http_client=client)
+    assert result.status == "PASS"
+    assert result.http_count == 10
+
+
+def test_http_static_fail_on_short_count() -> None:
+    client = FakeClient({"https://example.com/": '<div class="item"></div>' * 3})
+    result = run_case(_case(SmokeKind.HTTP_STATIC), http_client=client)
+    assert result.status == "FAIL"
+    assert "3 条" in result.actual
+
+
+def test_http_pagination_checks_page2() -> None:
+    case = _case(
+        SmokeKind.HTTP_PAGINATION,
+        page2_url="https://example.com/page2",
+        expected_page2_min=10,
     )
-    # 202 + 空 body：起点式反爬挑战
-    decision = classify_http_result(202, "")
-    assert decision.kind == RiskKind.BLOCKED
-    assert decision.reason == "challenge_202"
-    # 202 + JSON：正常异步任务，不判拦截
-    assert classify_http_result(202, '{"task":"accepted"}').kind == RiskKind.OK
-    # 长页面里的「请登录」按钮不是登录墙
-    assert (
-        classify_http_result(200, "正文内容。" * 500 + "请登录").kind
-        == RiskKind.OK
-    )
-    # 正常大页面里的 signature 字样不是签名失效
-    assert (
-        classify_http_result(200, "正常内容。" * 500 + "a_bogus signature").kind
-        == RiskKind.OK
-    )
-
-
-def test_run_strategies():
-    results = run_strategies(
-        [
-            ("empty", lambda: []),
-            ("boom", lambda: (_ for _ in ()).throw(ValueError("x"))),
-            ("ok", lambda: [1, 2]),
-        ],
-        stop_on_first_items=True,
-    )
-    assert [r.name for r in results] == ["empty", "boom", "ok"]
-    assert results[1].ok is False and results[2].items == [1, 2]
-
-
-def test_platform_spec_from_dict():
-    spec = PlatformSpec.from_dict(
+    client = FakeClient(
         {
-            "name": "demo",
-            "start_url": "https://example.com",
-            "card_selector": "div.item",
-            "fields": {"title": {"selector": "h3"}, "url": {"selector": "a", "attr": "href"}},
-            "scroll": {"times": 2},
+            "https://example.com/": '<div class="item"></div>' * 10,
+            "https://example.com/page2": '<div class="item"></div>' * 2,
         }
     )
-    assert spec.name == "demo"
-    assert spec.fields["url"].attr == "href"
-    assert spec.scroll.times == 2
-    js = _build_extract_js(spec)
-    assert "querySelectorAll" in js
+    result = run_case(case, http_client=client)
+    assert result.status == "FAIL"
+    assert "第二页" in result.actual
+    assert result.metrics["page2"]["count"] == 2
 
 
-def test_field_spec_default():
-    f = FieldSpec("h3")
-    assert f.attr == "text" and f.all is False
+def test_http_pagination_pass() -> None:
+    case = _case(
+        SmokeKind.HTTP_PAGINATION,
+        page2_url="https://example.com/page2",
+        expected_page2_min=10,
+    )
+    client = FakeClient(
+        {
+            "https://example.com/": '<div class="item"></div>' * 10,
+            "https://example.com/page2": '<div class="item"></div>' * 10,
+        }
+    )
+    assert run_case(case, http_client=client).status == "PASS"
+
+
+# ── JS 渲染 ──────────────────────────────────────────
+def test_js_render_pass() -> None:
+    case = _case(SmokeKind.JS_RENDER, http_expected_max=0)
+    client = FakeClient({"https://example.com/": "<html></html>"})
+    page = FakePage(counts={"div.item": 10})
+    result = run_case(case, page=page, http_client=client)
+    assert result.status == "PASS"
+    assert result.http_count == 0
+    assert result.browser_count == 10
+
+
+def test_js_render_fails_if_http_already_has_items() -> None:
+    case = _case(SmokeKind.JS_RENDER, http_expected_max=0)
+    client = FakeClient({"https://example.com/": '<div class="item"></div>' * 10})
+    result = run_case(case, page=FakePage(counts={"div.item": 10}), http_client=client)
+    assert result.status == "FAIL"
+    assert "SSR" in result.detail
+
+
+def test_js_render_without_browser_is_skip() -> None:
+    case = _case(SmokeKind.JS_RENDER, http_expected_max=0)
+    client = FakeClient({"https://example.com/": "<html></html>"})
+    assert run_case(case, page=None, http_client=client).status == "SKIP"
+
+
+# ── 慢加载 / 滚动 / 登录 ─────────────────────────────
+def test_slow_load_pass() -> None:
+    case = _case(SmokeKind.SLOW_LOAD, render_timeout_ms=1000)
+    result = run_case(case, page=FakePage(counts={"div.item": 10}))
+    assert result.status == "PASS"
+
+
+def test_slow_load_fail_when_still_empty() -> None:
+    case = _case(SmokeKind.SLOW_LOAD, render_timeout_ms=200)
+    result = run_case(case, page=FakePage(counts={"div.item": 0}))
+    assert result.status == "FAIL"
+
+
+def test_infinite_scroll_pass() -> None:
+    case = _case(SmokeKind.INFINITE_SCROLL, scroll_rounds=3)
+    result = run_case(case, page=FakePage(counts={"div.item": 10}))
+    assert result.status == "PASS"
+    assert result.browser_count == 10
+
+
+def test_infinite_scroll_allows_more_than_minimum() -> None:
+    """expected_max=None 只要求下限；滚出 100 条不应判失败。"""
+    case = _case(SmokeKind.INFINITE_SCROLL, scroll_rounds=3, expected_min=10)
+    result = run_case(case, page=FakePage(counts={"div.item": 100}))
+    assert result.status == "PASS"
+    assert result.browser_count == 100
+
+
+def test_infinite_scroll_fail_when_empty() -> None:
+    case = _case(SmokeKind.INFINITE_SCROLL, scroll_rounds=2)
+    result = run_case(case, page=FakePage(counts={"div.item": 0}))
+    assert result.status == "FAIL"
+
+
+def test_login_pass() -> None:
+    case = _case(
+        SmokeKind.LOGIN,
+        login_user="standard_user",
+        login_password="secret_sauce",
+        login_success_selector=".inventory_item",
+        expected_min=6,
+    )
+    page = FakePage(counts={".inventory_item": 6})
+    result = run_case(case, page=page)
+    assert result.status == "PASS"
+    assert page.filled == [
+        ("#user-name", "standard_user"),
+        ("#password", "secret_sauce"),
+    ]
+    assert page.clicked == ["#login-button"]
+
+
+def test_login_fails_on_wrong_redirect() -> None:
+    case = _case(
+        SmokeKind.LOGIN,
+        login_user="u",
+        login_password="p",
+        login_success_selector=".inventory_item",
+        expected_min=6,
+    )
+    page = FakePage(
+        counts={".inventory_item": 6},
+        url_after="https://www.saucedemo.com/",
+    )
+    assert run_case(case, page=page).status == "FAIL"
+
+
+# ── 负向控制 ─────────────────────────────────────────
+def test_negative_control_passes_when_selector_is_wrong() -> None:
+    case = _case(SmokeKind.NEGATIVE_CONTROL, item_selector="div.wrong")
+    client = FakeClient({"https://example.com/": '<div class="item"></div>' * 10})
+    result = run_case(case, http_client=client)
+    assert result.status == "PASS"
+    assert result.http_count == 0
+
+
+def test_negative_control_fails_when_checker_would_be_ok() -> None:
+    case = _case(SmokeKind.NEGATIVE_CONTROL, item_selector="div.item")
+    client = FakeClient({"https://example.com/": '<div class="item"></div>' * 10})
+    result = run_case(case, http_client=client)
+    assert result.status == "FAIL"
+    assert "负向控制失效" in result.detail
+
+
+# ── 报告 / CLI ───────────────────────────────────────
+def test_run_smoke_report_and_write(tmp_path: Path) -> None:
+    client = FakeClient(
+        {
+            "https://example.com/": '<div class="item"></div>' * 10,
+        }
+    )
+    report = run_smoke([_case(SmokeKind.HTTP_STATIC)], http_client=client)
+    assert report.counts()["PASS"] == 1
+    assert report.has_fail() is False
+    assert "[PASS]" in report.render()
+    out = report.write(tmp_path / "smoke.json")
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["summary"]["PASS"] == 1
+
+
+def test_report_fail_counts() -> None:
+    report = SmokeReport()
+    report.add(SmokeResult("a", "http_static", True, "PASS"))
+    report.add(SmokeResult("b", "http_static", False, "FAIL"))
+    assert report.counts() == {"PASS": 1, "FAIL": 1, "SKIP": 0}
+    assert report.has_fail()
+
+
+def test_cli_merge_attempts() -> None:
+    first = SmokeReport()
+    first.add(SmokeResult("a", "http_static", True, "PASS", elapsed_ms=10))
+    second = SmokeReport()
+    second.add(SmokeResult("a", "http_static", False, "FAIL", elapsed_ms=20))
+    merged = smoke_cli._merge_attempts([first, second])
+    assert merged.results[0].status == "FAIL"
+    assert merged.results[0].elapsed_ms == 20
+    assert len(merged.results[0].metrics["attempts"]) == 2
+
+
+def test_cli_only_rejects_unknown() -> None:
+    assert smoke_cli.main(["--only", "no-such-case"]) == 2

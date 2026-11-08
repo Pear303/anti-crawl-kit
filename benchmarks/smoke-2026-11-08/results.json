@@ -1,0 +1,186 @@
+{
+  "started_at": "2026-11-08 13:49:33",
+  "finished_at": "2026-11-08 13:50:15",
+  "summary": {
+    "PASS": 9,
+    "FAIL": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "name": "books_static",
+      "kind": "http_static",
+      "ok": true,
+      "status": "PASS",
+      "expected": "",
+      "actual": "20 条（期望 20）",
+      "http_count": 20,
+      "browser_count": null,
+      "elapsed_ms": 1399,
+      "detail": "",
+      "error": "",
+      "metrics": {}
+    },
+    {
+      "name": "books_pagination",
+      "kind": "http_pagination",
+      "ok": true,
+      "status": "PASS",
+      "expected": "",
+      "actual": "20 条（期望 20）; 第二页 20 条",
+      "http_count": 20,
+      "browser_count": null,
+      "elapsed_ms": 1353,
+      "detail": "",
+      "error": "",
+      "metrics": {
+        "page2": {
+          "status": 200,
+          "count": 20,
+          "min": 20
+        }
+      }
+    },
+    {
+      "name": "web_scraping_products",
+      "kind": "http_pagination",
+      "ok": true,
+      "status": "PASS",
+      "expected": "",
+      "actual": "5 条（期望 5）; 第二页 5 条",
+      "http_count": 5,
+      "browser_count": null,
+      "elapsed_ms": 1916,
+      "detail": "",
+      "error": "",
+      "metrics": {
+        "page2": {
+          "status": 200,
+          "count": 5,
+          "min": 5
+        }
+      }
+    },
+    {
+      "name": "countries_big_list",
+      "kind": "big_list",
+      "ok": true,
+      "status": "PASS",
+      "expected": "",
+      "actual": "250 条（期望 250）",
+      "http_count": 250,
+      "browser_count": null,
+      "elapsed_ms": 1270,
+      "detail": "",
+      "error": "",
+      "metrics": {}
+    },
+    {
+      "name": "quotes_js_render",
+      "kind": "js_render",
+      "ok": true,
+      "status": "PASS",
+      "expected": "HTTP 空壳 + 浏览器 10 条",
+      "actual": "HTTP 0 条 / 浏览器 10 条（期望 10）",
+      "http_count": 0,
+      "browser_count": 10,
+      "elapsed_ms": 6763,
+      "detail": "",
+      "error": "",
+      "metrics": {
+        "render_wait_ms": 10,
+        "nav": {
+          "url": "https://quotes.toscrape.com/js/",
+          "attempts": 1,
+          "goto_ms": 4835,
+          "ready_state": "interactive",
+          "slow_load": false,
+          "recovered_from_timeout": false,
+          "error": ""
+        }
+      }
+    },
+    {
+      "name": "quotes_slow_load",
+      "kind": "slow_load",
+      "ok": true,
+      "status": "PASS",
+      "expected": "慢渲染后仍拿到 10 条",
+      "actual": "10 条（期望 10）",
+      "http_count": null,
+      "browser_count": 10,
+      "elapsed_ms": 14293,
+      "detail": "",
+      "error": "",
+      "metrics": {
+        "render_wait_ms": 10402,
+        "nav": {
+          "url": "https://quotes.toscrape.com/js-delayed?delay=10000",
+          "attempts": 1,
+          "goto_ms": 3885,
+          "ready_state": "interactive",
+          "slow_load": false,
+          "recovered_from_timeout": false,
+          "error": ""
+        }
+      }
+    },
+    {
+      "name": "quotes_infinite_scroll",
+      "kind": "infinite_scroll",
+      "ok": true,
+      "status": "PASS",
+      "expected": "滚动后 >= 10 条且能停止",
+      "actual": "70 条（期望 >= 10）；滚动序列 [10, 20, 30, 30, 50, 50, 70]",
+      "http_count": null,
+      "browser_count": 70,
+      "elapsed_ms": 10950,
+      "detail": "",
+      "error": "",
+      "metrics": {
+        "counts": [
+          10,
+          20,
+          30,
+          30,
+          50,
+          50,
+          70
+        ],
+        "rounds": 6,
+        "stopped": false
+      }
+    },
+    {
+      "name": "saucedemo_login",
+      "kind": "login",
+      "ok": true,
+      "status": "PASS",
+      "expected": "登录后 >= 6 件商品",
+      "actual": "6 条（期望 >= 6）",
+      "http_count": null,
+      "browser_count": 6,
+      "elapsed_ms": 1783,
+      "detail": "",
+      "error": "",
+      "metrics": {
+        "url_after": "https://www.saucedemo.com/inventory.html",
+        "render_wait_ms": 405
+      }
+    },
+    {
+      "name": "quotes_negative_control",
+      "kind": "negative_control",
+      "ok": true,
+      "status": "PASS",
+      "expected": "错误选择器必须判失败（不能默认 OK）",
+      "actual": "错误选择器命中 0 条，检测层判 FAIL",
+      "http_count": 0,
+      "browser_count": null,
+      "elapsed_ms": 592,
+      "detail": "负向控制生效",
+      "error": "",
+      "metrics": {}
+    }
+  ]
+}
