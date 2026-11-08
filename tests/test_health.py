@@ -204,6 +204,19 @@ def test_load_config_json(tmp_path: Path) -> None:
     assert targets[0].auth_cookies == ("sessionid",)
 
 
+def test_load_config_with_bom(tmp_path: Path) -> None:
+    """Windows 编辑器/PowerShell 常写 BOM，配置读取必须兼容。"""
+    _make_package(tmp_path)
+    config = {
+        "module_root": str(tmp_path),
+        "platforms": [{"platform": "demo"}],
+    }
+    path = tmp_path / "bom.json"
+    path.write_text(json.dumps(config), encoding="utf-8-sig")
+    _, targets = load_health_config(path)
+    assert targets[0].platform == "demo"
+
+
 def test_cli_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     _make_package(tmp_path)
     config = {

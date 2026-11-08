@@ -214,7 +214,7 @@ class HealthReport:
 
 def _read_source(path: Path) -> str:
     try:
-        return path.read_text(encoding="utf-8", errors="replace").replace('\\"', '"')
+        return path.read_text(encoding="utf-8-sig", errors="replace").replace('\\"', '"')
     except OSError:
         return ""
 
@@ -694,7 +694,8 @@ def load_health_config(path: str | Path) -> tuple[Path | None, list[HealthTarget
             probe_selectors: [".bili-video-card"]
     """
     config_path = Path(path)
-    text = config_path.read_text(encoding="utf-8")
+    # utf-8-sig：兼容 Windows 编辑器/PowerShell 写入的 BOM。
+    text = config_path.read_text(encoding="utf-8-sig")
     suffix = config_path.suffix.lower()
     if suffix == ".json":
         data = json.loads(text)
