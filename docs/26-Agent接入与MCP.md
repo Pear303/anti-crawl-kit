@@ -129,13 +129,15 @@ outputs:
 
 | 步骤 | 作用 |
 |---|---|
-| `http_get` / `http_json` | HTTP 请求（走 `AntiRiskHttpClient`） |
+| `http_get` / `http_json` | GET HTTP 请求 |
+| `http_request` | GET/POST + headers + `cookies_env`（推荐） |
 | `browser_goto` | 浏览器导航 + 导航指标 |
 | `browser_count` / `browser_wait_count` | 浏览器内选择器计数 / 轮询等待 |
 | `count_html` | 原始 HTML 选择器计数 |
 | `classify_html` / `empty_shell` | 页面形态 / 空壳检测 |
 | `extract_state` | SSR 状态容器提取 |
 | `assert` | `eq/ne/gt/gte/lt/lte/in/contains` |
+| `assert_non_empty` | 列表/分页/总数非空断言（防静默 0 条） |
 | `set_var` / `log` / `sleep` | 变量 / 日志 / 等待 |
 
 ### 3.5 自定义步骤（扩展点）
@@ -150,6 +152,39 @@ def my_platform_parse(params, runtime):
 ```
 
 然后 recipe 里直接 `uses: my_platform_parse`。**自定义步骤必须在 `load_recipe` 之前注册**，否则校验会报「未注册步骤」。
+
+### 3.6 静默空结果断言
+
+很多平台的参数错误不会报错：返回 `err_no=0` + `data=[]`。
+掘金评论接口就是典型：`limit` 写成 `count` 时返回 0 条，看起来像「没有评论」。
+
+recipe 必须显式断言非空：
+
+```yaml
+- id: comments
+  uses: http_request
+  with:
+    method: POST
+    url: "https://api.juejin.cn/interact_api/v1/comment/list?aid=2608&uuid=${inputs.uuid}&spider=0"
+    json: {item_id: "${inputs.article_id}", item_type: 2, limit: 20, sort: 1}
+    cookies_env: JUEJIN_COOKIE
+
+- id: assert_comments
+  uses: assert_non_empty
+  with:
+    value: "${steps.comments.data}"
+    path: data
+    min: 1
+    label: "掘金评论"
+```
+
+`assert_non_empty` 支持 `list` / `dict` / `int`，`path` 用点号取值；
+失败信息会提示检查 `count vs limit`、cookie/签名和分页游标。
+
+示例：`examples/recipes/juejin_comment_check.yaml`。
+
+实测：正确 `limit` → recipe `done`（第一页 20 条）；把 `limit` 改成 `count`
+→ recipe `failed`，`data=[]`，错误信息直接提示「检查 count vs limit」。
 
 ---
 

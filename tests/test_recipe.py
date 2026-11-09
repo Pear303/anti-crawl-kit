@@ -31,8 +31,10 @@ class FakeResponse:
 
 
 class FakeClient:
-    def __init__(self, text: str = '<div class="item"></div>' * 3) -> None:
+    def __init__(self, text: str = '<div class="item"></div>' * 3, post_data=None) -> None:
         self.text = text
+        self.post_data = post_data if post_data is not None else {"err_no": 0, "data": []}
+        self.last_cookies = None
 
     def get_text(self, url: str, **kwargs) -> FakeResponse:
         response = FakeResponse(self.text)
@@ -43,6 +45,13 @@ class FakeClient:
         response = FakeResponse(self.text)
         response.url = url
         response.data = {"code": 0, "data": {"count": 3}}
+        return response
+
+    def post_json(self, url: str, *, json_data=None, headers=None, cookies=None) -> FakeResponse:
+        self.last_cookies = cookies
+        response = FakeResponse(self.text)
+        response.url = url
+        response.data = self.post_data
         return response
 
 
@@ -59,7 +68,15 @@ def _recipe(steps: list[dict], *, allow_hosts: list[str] | None = None) -> Recip
 
 def test_builtin_steps_registered() -> None:
     steps = list_steps()
-    for name in ("http_get", "count_html", "classify_html", "assert", "set_var"):
+    for name in (
+        "http_get",
+        "http_request",
+        "assert_non_empty",
+        "count_html",
+        "classify_html",
+        "assert",
+        "set_var",
+    ):
         assert name in steps
 
 
@@ -247,6 +264,127 @@ def test_allow_hosts_blocks() -> None:
     )
     assert run.status == "failed"
     assert "allow_hosts" in run.error
+
+
+def test_http_request_post_and_assert_non_empty() -> None:
+    recipe = _recipe(
+        [
+            {
+                "id": "comments",
+                "uses": "http_request",
+                "with": {
+                    "method": "POST",
+                    "url": "https://example.com/comments",
+                    "json": {"item_id": "1", "limit": 20},
+                },
+            },
+            {
+                "id": "check",
+                "uses": "assert_non_empty",
+                "with": {
+                    "value": "${steps.comments.data}",
+                    "path": "data",
+                    "label": "评论",
+                },
+            },
+        ]
+    )
+    client = FakeClient(post_data={"err_no": 0, "data": [{"id": 1}, {"id": 2}]})
+    run = run_recipe(recipe, http_client=client)
+    assert run.status == "done"
+    assert run.context["steps"]["check"]["count"] == 2
+
+
+def test_assert_non_empty_detects_silent_empty() -> None:
+    recipe = _recipe(
+        [
+            {
+                "id": "comments",
+                "uses": "http_request",
+                "with": {
+                    "method": "POST",
+                    "url": "https://example.com/comments",
+                    "json": {"item_id": "1", "count": 20},
+                },
+            },
+            {
+                "id": "check",
+                "uses": "assert_non_empty",
+                "with": {
+                    "value": "${steps.comments.data}",
+                    "path": "data",
+                    "label": "评论",
+                },
+            },
+        ]
+    )
+    client = FakeClient(post_data={"err_no": 0, "data": [], "count": 0})
+    run = run_recipe(recipe, http_client=client)
+    assert run.status == "failed"
+    assert "静默空结果" in run.error
+    assert "count vs limit" in run.error
+
+
+def test_assert_non_empty_path_and_int() -> None:
+    recipe = _recipe(
+        [
+            {
+                "id": "ok",
+                "uses": "assert_non_empty",
+                "with": {
+                    "value": {"data": {"comments": [{"id": 1}]}},
+                    "path": "data.comments",
+                    "label": "评论",
+                },
+            },
+            {
+                "id": "zero",
+                "uses": "assert_non_empty",
+                "when": "False",
+                "with": {"value": 0, "label": "总数"},
+            },
+        ]
+    )
+    run = run_recipe(recipe, http_client=FakeClient())
+    assert run.status == "done"
+    assert run.context["steps"]["ok"]["count"] == 1
+
+
+def test_assert_non_empty_int_zero_fails() -> None:
+    recipe = _recipe(
+        [
+            {
+                "id": "zero",
+                "uses": "assert_non_empty",
+                "with": {"value": 0, "label": "总数"},
+            }
+        ]
+    )
+    run = run_recipe(recipe, http_client=FakeClient())
+    assert run.status == "failed"
+    assert "静默空结果" in run.error
+
+
+def test_http_request_cookies_env(monkeypatch) -> None:
+    monkeypatch.setenv("TEST_JUEJIN_COOKIE", "a=1; b=2")
+    recipe = _recipe(
+        [
+            {
+                "id": "req",
+                "uses": "http_request",
+                "with": {
+                    "method": "POST",
+                    "url": "https://example.com/comments",
+                    "json": {"item_id": "1", "limit": 20},
+                    "cookies_env": "TEST_JUEJIN_COOKIE",
+                },
+            }
+        ]
+    )
+    client = FakeClient(post_data={"err_no": 0, "data": [{"id": 1}]})
+    run = run_recipe(recipe, http_client=client)
+    assert run.status == "done"
+    assert client.last_cookies == {"a": "1", "b": "2"}
 
 
 def test_validate_recipe_duplicate_and_unknown() -> None:

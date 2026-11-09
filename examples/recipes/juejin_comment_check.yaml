@@ -1,0 +1,50 @@
+id: juejin_comment_check
+title: 掘金评论接口静默空结果检查
+description: |
+  演示 assert_non_empty 如何捕获参数错误导致的「成功但 0 条」。
+  把下面的 limit 改成 count，接口会返回 err_no=0 + data=[]，
+  这条配方会直接判失败，而不是把 0 条当成功。
+version: "1"
+allow_hosts:
+  - api.juejin.cn
+
+inputs:
+  article_id:
+    type: string
+    required: true
+    default: "7694835192107860009"
+  uuid:
+    type: string
+    required: true
+    default: "7613599746820834850"
+
+steps:
+  - id: comments
+    uses: http_request
+    with:
+      method: POST
+      url: "https://api.juejin.cn/interact_api/v1/comment/list?aid=2608&uuid=${inputs.uuid}&spider=0"
+      json:
+        item_id: "${inputs.article_id}"
+        item_type: 2
+        cursor: "0"
+        limit: 20
+        sort: 1
+        client_type: 2608
+      headers:
+        Referer: "https://juejin.cn/post/${inputs.article_id}"
+        Origin: "https://juejin.cn"
+      cookies_env: JUEJIN_COOKIE
+
+  # 关键：0 条必须判失败；这是 count vs limit 静默坑的兜底
+  - id: assert_comments
+    uses: assert_non_empty
+    with:
+      value: "${steps.comments.data}"
+      path: data
+      min: 1
+      label: "掘金评论"
+
+outputs:
+  fetched: "${steps.assert_comments.count}"
+  has_more: "${steps.comments.data.has_more}"

@@ -59,6 +59,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 import time
 import uuid
@@ -485,6 +486,111 @@ def _step_http_json(params: dict[str, Any], runtime: RecipeRuntime) -> dict[str,
                 break
         output["value"] = current
     return output
+
+
+@register_step("http_request", description="HTTP 请求（GET/POST，支持 cookies_env）")
+def _step_http_request(params: dict[str, Any], runtime: RecipeRuntime) -> dict[str, Any]:
+    """通用 HTTP 步骤：解决 POST 接口和鉴权 cookie 的配置化问题。
+
+    ``cookies_env`` 指向环境变量名，不把 cookie 写进 YAML。
+    """
+    method = str(params.get("method", "GET")).upper()
+    url = str(params["url"])
+    _check_url(url, runtime.allow_hosts)
+    if runtime.http_client is None:
+        from .http import AntiRiskHttpClient
+
+        runtime.http_client = AntiRiskHttpClient(
+            "recipe", timeout=int(params.get("timeout", 20))
+        )
+
+    cookies = params.get("cookies")
+    cookie_env = str(params.get("cookies_env", "")).strip()
+    if cookie_env:
+        raw = os.environ.get(cookie_env, "")
+        if raw:
+            from .js_bundle import parse_cookie_header
+
+            cookies = parse_cookie_header(raw)
+
+    headers = params.get("headers")
+    if method == "POST":
+        result = runtime.http_client.post_json(
+            url,
+            json_data=params.get("json") or {},
+            headers=headers,
+            cookies=cookies,
+        )
+        return {
+            "status": result.status_code,
+            "url": result.url,
+            "data": result.data,
+            "text": result.text,
+        }
+    if method == "GET":
+        if params.get("parse_json", True):
+            result = runtime.http_client.get_json(
+                url, headers=headers, cookies=cookies
+            )
+        else:
+            result = runtime.http_client.get_text(
+                url, headers=headers, cookies=cookies
+            )
+        return {
+            "status": result.status_code,
+            "url": result.url,
+            "data": result.data,
+            "text": result.text,
+        }
+    raise ValueError(f"http_request 只支持 GET/POST，收到 {method!r}")
+
+
+@register_step("assert_non_empty", description="断言列表/分页结果非空（防静默空结果）")
+def _step_assert_non_empty(params: dict[str, Any], runtime: RecipeRuntime) -> dict[str, Any]:
+    """检查接口返回的列表/总数，防止 `count` 写成 `limit` 时静默返回 0 条。
+
+    ``path`` 支持点号路径（如 ``data.comments``）；不传时自动找
+    ``data / comments / items / list`` 里的列表。
+    """
+    value = params.get("value")
+    path = str(params.get("path", "")).strip()
+    if path:
+        current = value
+        for part in path.split("."):
+            if isinstance(current, Mapping):
+                current = current.get(part)
+            elif isinstance(current, list) and part.lstrip("-").isdigit():
+                current = current[int(part)]
+            else:
+                current = None
+                break
+        value = current
+
+    count = -1
+    if isinstance(value, list):
+        count = len(value)
+    elif isinstance(value, Mapping):
+        for key in ("data", "comments", "items", "list"):
+            if isinstance(value.get(key), list):
+                count = len(value[key])
+                break
+        if count < 0 and isinstance(value.get("count"), int):
+            count = int(value["count"])
+    elif isinstance(value, int) and not isinstance(value, bool):
+        count = value
+    elif value is None:
+        count = 0
+    else:
+        count = 1
+
+    minimum = int(params.get("min", 1))
+    label = str(params.get("label", "value"))
+    if count < minimum:
+        raise AssertionError(
+            f"静默空结果: {label} 只有 {count} 条（要求 >= {minimum}）；"
+            "检查参数名（例如 count vs limit）、cookie/签名和分页游标"
+        )
+    return {"ok": True, "count": count, "min": minimum, "label": label}
 
 
 @register_step("browser_goto", description="浏览器导航，返回导航指标")
