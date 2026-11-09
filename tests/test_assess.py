@@ -112,9 +112,11 @@ def test_config_from_dict() -> None:
             "incremental": {"mode": "incremental", "min_new_items": 1},
             "runs": 5,
             "audit_only": ["anonymous_html"],
+            "channel": "msedge",
         }
     )
     assert config.runs == 5
+    assert config.channel == "msedge"
     assert config.incremental.mode == "incremental"
     assert config.incremental.min_new_items == 1
     assert config.audit_only == ("anonymous_html",)

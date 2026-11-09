@@ -207,8 +207,9 @@ get_job_result(job_id) -> {"result": {...}, "error": ""}
 ```bash
 pip install "anti-crawl-kit[mcp,all]"
 
-ack-mcp                                    # stdio（本地 agent）
+ack-mcp                                    # stdio（本地 agent；默认 chrome → msedge）
 ack-mcp --transport http --port 8765       # Streamable HTTP
+ack-mcp --channel msedge                   # 强制 Edge
 ack-mcp --allow-hosts books.toscrape.com,quotes.toscrape.com
 ack-mcp --recipes-dir ./recipes
 ```
@@ -223,6 +224,7 @@ MCP 连续调用不再每次启动 Chrome。`BrowserPool` 的策略：
 - context 隔离 cookie / localStorage / IndexedDB，租约结束关闭；
 - `max_sessions` 限制并发浏览器进程数；
 - `idle_ttl` 到期或 browser 断连时自动重建；
+- `--channel chrome|msedge` 强制通道；不传时按 `chrome → msedge` 回退；
 - **线程亲和性**：patchright sync API 不能跨线程使用，所以 browser 按线程持有，
   不跨线程共享（这是驱动限制，不是设计取舍）。
 

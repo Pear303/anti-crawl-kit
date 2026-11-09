@@ -176,6 +176,7 @@ class ToolService:
         max_workers: int = 2,
         max_browser_sessions: int = 2,
         browser_idle_ttl: float = 600.0,
+        browser_channel: str = "",
     ) -> None:
         self.allow_hosts = tuple(host for host in allow_hosts if host)
         self._http_client = http_client
@@ -185,6 +186,7 @@ class ToolService:
         self._browser_pool: BrowserPool | None = None
         self._max_browser_sessions = max(1, max_browser_sessions)
         self._browser_idle_ttl = browser_idle_ttl
+        self._browser_channel = browser_channel
 
     # ── 基础设施 ──
     def _client(self):
@@ -202,6 +204,7 @@ class ToolService:
                 max_sessions=self._max_browser_sessions,
                 headless=True,
                 idle_ttl=self._browser_idle_ttl,
+                channel=self._browser_channel or None,
             )
         return self._browser_pool.lease()
 
@@ -259,6 +262,7 @@ class ToolService:
                     if self._browser_pool is not None
                     else {"started": False, "max_sessions": self._max_browser_sessions}
                 ),
+                "browser_channel": self._browser_channel or "auto",
                 "job_concurrency": 2,
             }
         )
@@ -950,6 +954,12 @@ def main(argv: list[str] | None = None) -> int:
         help="逗号分隔的域名白名单；空表示不限制（本地开发）",
     )
     parser.add_argument("--recipes-dir", default="", help="recipe 目录（默认 ./recipes）")
+    parser.add_argument(
+        "--channel",
+        default="",
+        choices=["", "chrome", "msedge"],
+        help="浏览器通道（默认自动：chrome → msedge）",
+    )
     args = parser.parse_args(argv)
 
     allow_hosts = tuple(
@@ -958,6 +968,7 @@ def main(argv: list[str] | None = None) -> int:
     service = ToolService(
         allow_hosts=allow_hosts,
         recipes_dir=args.recipes_dir or None,
+        browser_channel=args.channel,
     )
     try:
         server = create_server(service)

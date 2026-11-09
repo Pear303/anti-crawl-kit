@@ -126,12 +126,20 @@ ack-smoke --json smoke.json
 ack-smoke --no-browser --strict                     # CI：强制要求浏览器用例
 
 # 19) MCP server：让 agent 直接调用探测/体检/冒烟/recipe
-ack-mcp                                             # stdio
+ack-mcp                                             # stdio（默认 chrome → msedge）
 ack-mcp --transport http --port 8765                # Streamable HTTP
+ack-mcp --channel msedge                            # 强制 Edge
 
 # 20) 技术验证评估：G0 形态 → G1 路径 → G2 数据 → G3 稳定 → G4 工程
 ack-assess --config examples/assessments/books.yaml
 # 输出 runs/assessment-books/{assessment.json,assessment.md}
+```
+
+浏览器通道：
+
+```bash
+ack-smoke --channel msedge          # 用 Edge 跑冒烟
+ack-assess --config ... --channel msedge   # G1 审计用 Edge
 ```
 
 不想安装成包也能跑：所有示例和工具都会自动把 `src/` 加进 `sys.path`。

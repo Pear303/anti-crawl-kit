@@ -102,6 +102,12 @@ def test_list_capabilities() -> None:
     assert "assess_project" in data["tools"]
     assert "http_get" in data["steps"]
     assert "curl_cffi" in data["optional_deps"]
+    assert data["browser_channel"] == "auto"
+
+
+def test_list_capabilities_channel() -> None:
+    service = ToolService(http_client=FakeHTTP({}), browser_channel="msedge")
+    assert service.list_capabilities()["browser_channel"] == "msedge"
 
 
 def test_job_manager_success() -> None:

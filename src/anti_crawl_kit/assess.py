@@ -67,6 +67,7 @@ class AssessmentConfig:
     interval_ms: int = 500
     min_success_rate: float = 1.0
     count_tolerance: float = 0.2
+    channel: str = ""               # G1 审计浏览器通道：""/chrome/msedge
     audit_config: str = ""
     audit_only: tuple[str, ...] = ("anonymous_html", "dom")
     health_config: str = ""
@@ -116,6 +117,7 @@ class AssessmentConfig:
             interval_ms=int(data.get("interval_ms", 500) or 0),
             min_success_rate=float(data.get("min_success_rate", 1.0)),
             count_tolerance=float(data.get("count_tolerance", 0.2)),
+            channel=str(data.get("channel", "")),
             audit_config=resolve(str(data.get("audit_config", ""))),
             audit_only=tuple(str(item) for item in audit_only),
             health_config=resolve(str(data.get("health_config", ""))),
@@ -301,9 +303,13 @@ def _gate_g1(
             gaps=["路径审计未配置：补 audit YAML（14 条路径）"],
         )
     try:
+        from dataclasses import replace
+
         from .tools.path_audit import load_audit_config, run_audit
 
         audit_config = load_audit_config(config.audit_config)
+        if config.channel:
+            audit_config = replace(audit_config, channel=config.channel)
         audit = run_audit(
             audit_config,
             only=list(config.audit_only),

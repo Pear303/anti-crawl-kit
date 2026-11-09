@@ -40,6 +40,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--only", type=str, default="", help="只跑指定用例（逗号分隔）")
     parser.add_argument("--no-browser", action="store_true", help="只跑纯 HTTP 用例")
     parser.add_argument("--headed", action="store_true", help="有头浏览器")
+    parser.add_argument(
+        "--channel",
+        default="",
+        choices=["", "chrome", "msedge"],
+        help="浏览器通道（默认自动：chrome → msedge）",
+    )
     parser.add_argument("--json", type=str, default="", help="落盘 JSON 报告")
     parser.add_argument("--strict", action="store_true", help="SKIP 也返回退出码 1")
     parser.add_argument("--repeat", type=int, default=1, help="每个用例重复次数（默认 1）")
@@ -129,7 +135,11 @@ def main(argv: list[str] | None = None) -> int:
                 from anti_crawl_kit.session import BrowserSession
 
                 page = stack.enter_context(
-                    BrowserSession(headless=not args.headed, skip_version_check=True)
+                    BrowserSession(
+                        headless=not args.headed,
+                        skip_version_check=True,
+                        channel=args.channel or None,
+                    )
                 )
             except Exception as exc:  # 浏览器不可用 → 浏览器用例 SKIP，不阻塞 HTTP 用例
                 print(

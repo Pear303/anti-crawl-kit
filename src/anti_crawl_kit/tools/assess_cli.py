@@ -30,6 +30,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", required=True, help="评估配置 YAML/JSON")
     parser.add_argument("--out", default="", help="输出目录（默认 runs/assessment-<platform>）")
     parser.add_argument("--no-audit", action="store_true", help="跳过 G1 路径审计")
+    parser.add_argument(
+        "--channel",
+        default="",
+        choices=["", "chrome", "msedge"],
+        help="G1 审计浏览器通道（默认自动：chrome → msedge）",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -43,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.no_audit:
         config = replace(config, audit_config="")
+    if args.channel:
+        config = replace(config, channel=args.channel)
 
     out_dir = Path(args.out) if args.out else Path("runs") / f"assessment-{config.platform}"
     try:
