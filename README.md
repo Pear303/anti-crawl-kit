@@ -355,6 +355,7 @@ python examples/07_config_driven.py examples/platforms/新平台.yaml --out outp
 | [25-真实站点冒烟](docs/25-真实站点冒烟.md) | 发版前验证真实链路、负向控制、冒烟矩阵 |
 | [26-Agent接入与MCP](docs/26-Agent接入与MCP.md) | 让 agent 直接调用；recipe 检查点 / MCP tools |
 | [27-技术验证路线](docs/27-技术验证路线.md) | 立项前做 G0~G4 评估、Go/No-Go、缺口清单 |
+| [28-掘金真实采集记录](docs/28-掘金真实采集记录.md) | 真实平台验证：首页/作者/文章/评论/账号监控 |
 
 ---
 
