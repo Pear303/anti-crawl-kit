@@ -246,6 +246,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 - `requirements.txt` 由 `scripts/gen_requirements.py` 生成，勿手改
 - 临时文件用 `C:\Windows\Temp\opencode`
 - 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke` / `ack-mcp` / `ack-assess` / `ack-report` / `ack-ui`
+- 发布：改 `src/anti_crawl_kit/__init__.py` 的 `__version__`，打 `v*` tag 并推送；`release.yml` 自动构建、发 PyPI、建 GitHub Release。详见 `docs/30-发布流程.md`。
 
 ```bash
 python -m pytest tests -q             # 离线测试，应全绿
