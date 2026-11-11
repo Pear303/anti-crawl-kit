@@ -36,7 +36,7 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from enum import StrEnum
+from ._compat import StrEnum
 from typing import Any, Callable, Iterable, Sequence
 
 # 这些失败回退没有意义：风控/限流时换一层大概率还是被拦

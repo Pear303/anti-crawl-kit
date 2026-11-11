@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from enum import StrEnum
+from ._compat import StrEnum
 from typing import Any, Callable
 
 from .alive import ensure_alive

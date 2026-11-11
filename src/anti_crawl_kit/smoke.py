@@ -36,7 +36,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
+from ._compat import StrEnum
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Iterable
