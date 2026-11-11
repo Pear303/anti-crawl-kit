@@ -13,6 +13,8 @@ import pytest
 
 from anti_crawl_kit.ui import UiService, make_handler
 
+pytest.importorskip("yaml", reason="配方测试需要 [config] extra")
+
 LOCAL_RECIPE = """\
 id: local_demo
 title: 本地演示
