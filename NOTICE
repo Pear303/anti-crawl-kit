@@ -1,0 +1,36 @@
+# NOTICE
+
+anti-crawl-kit
+Copyright (c) 2026 anti-crawl-kit contributors
+
+This product contains an independent implementation inspired by the
+following open-source project. No source code from it is vendored.
+
+## Algorithmic inspiration
+
+- **Scrapling** — adaptive scraping ideas
+  - Copyright (c) D4Vinci
+  - License: BSD-3-Clause
+  - https://github.com/D4Vinci/Scrapling
+  - Used in: `src/anti_crawl_kit/adaptive_selector.py`
+    (independent standard-library implementation of the similarity idea;
+    no Scrapling code or dependencies are included).
+
+## Runtime dependencies (not vendored)
+
+| Package | License | Upstream |
+|---|---|---|
+| patchright | Apache-2.0 | https://github.com/Kaliiiiiiiiii-Vinyzu/patchright |
+| playwright | Apache-2.0 | https://github.com/microsoft/playwright |
+| curl_cffi | MIT | https://github.com/lexiforest/curl_cffi |
+| PyYAML | MIT | https://github.com/yaml/pyyaml |
+| mcp | MIT | https://github.com/modelcontextprotocol/python-sdk |
+
+The full license text of each dependency is distributed with that package.
+If you redistribute a bundled build, keep the corresponding upstream notices.
+
+## Documentation
+
+The methodology documents in `docs/` are original write-ups based on
+practical experience. They do not include proprietary platform algorithms,
+signing keys, cookies, or private API credentials.

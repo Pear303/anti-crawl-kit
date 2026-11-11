@@ -370,8 +370,19 @@ python examples/07_config_driven.py examples/platforms/新平台.yaml --out outp
 
 ## 9. 来源与维护
 
-- 代码提炼自生产项目 `packages/多个真实平台采集项目`（2026-07 ~ 2026-09 实战版本），
+- 代码提炼自多个真实平台采集项目的实战经验（已脱敏），
   已去除业务模型、数据库、服务端协议等耦合，只保留通用能力。
 - 版本基线：patchright 1.62.x / Chrome 152+；Python 3.10+。
 - 平台选择器会过期。任何「平台速查表」里的选择器都只作结构参考，
   上线前必须用 `tools/dom_probe.py` 重新确认。
+
+---
+
+## 10. License / 免责声明
+
+- 许可证：**MIT**，见 [LICENSE](LICENSE)。
+- 使用边界：见 [DISCLAIMER.md](DISCLAIMER.md)。
+- 第三方声明：见 [NOTICE](NOTICE)。
+
+仅用于授权数据或公开数据；禁止验证码破解、绕过访问控制、隐私数据采集。
+

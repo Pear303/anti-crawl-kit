@@ -29,3 +29,7 @@ venv/
 # 临时文件
 _h.txt
 *.log
+
+# 真实平台原始数据（可能含个人信息，禁止提交）
+benchmarks/**/data.json
+benchmarks/**/raw/
