@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 
 # 符号 → 子模块（PEP 562 惰性导出）
 _LAZY: dict[str, str] = {

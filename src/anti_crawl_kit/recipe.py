@@ -798,8 +798,13 @@ def run_recipe(
     start_index: int = 0,
     prior_steps: list[StepRun] | None = None,
     run_id: str = "",
+    on_event: Callable[[dict[str, Any]], None] | None = None,
 ) -> RecipeRun:
-    """执行配方；遇到 agent 检查点返回 ``needs_agent``。"""
+    """执行配方；遇到 agent 检查点返回 ``needs_agent``。
+
+    ``on_event`` 是可选的进度回调，用于 CLI / Web 控制台实时展示。
+    回调抛异常会被吞掉，不能影响配方本身。
+    """
     ctx = context or {
         "inputs": dict(inputs or {}),
         "steps": {},
@@ -824,15 +829,51 @@ def run_recipe(
         recipe_snapshot=recipe.to_dict(),
     )
 
+    def emit(event: dict[str, Any]) -> None:
+        if on_event is None:
+            return
+        try:
+            on_event(event)
+        except Exception:
+            # 进度回调只影响展示，不能把配方带崩。
+            pass
+
+    def finish(current: RecipeRun) -> RecipeRun:
+        emit(
+            {
+                "type": "done",
+                "run_id": current.run_id,
+                "status": current.status,
+                "error": current.error,
+            }
+        )
+        return current
+
     for index in range(start_index, len(recipe.steps)):
         step = recipe.steps[index]
         started = time.perf_counter()
+        emit(
+            {
+                "type": "step_start",
+                "index": index,
+                "step_id": step.id,
+                "uses": step.uses,
+            }
+        )
 
         if step.when:
             try:
                 if not eval_when(step.when, ctx):
                     run.steps.append(
                         StepRun(step.id, step.uses, "skipped", elapsed_ms=0)
+                    )
+                    emit(
+                        {
+                            "type": "step_skipped",
+                            "index": index,
+                            "step_id": step.id,
+                            "uses": step.uses,
+                        }
                     )
                     continue
             except Exception as exc:
@@ -841,15 +882,32 @@ def run_recipe(
                 run.steps.append(
                     StepRun(step.id, step.uses, "failed", error=run.error)
                 )
+                emit(
+                    {
+                        "type": "step_failed",
+                        "index": index,
+                        "step_id": step.id,
+                        "uses": step.uses,
+                        "error": run.error,
+                    }
+                )
                 run.finished_at = _now()
-                return run
+                return finish(run)
 
         if step.kind == "agent":
             run.status = "needs_agent"
             run.handoff = _build_handoff(step, index + 1, ctx)
             run.steps.append(StepRun(step.id, "agent", "needs_agent"))
             run.finished_at = _now()
-            return run
+            emit(
+                {
+                    "type": "needs_agent",
+                    "index": index,
+                    "step_id": step.id,
+                    "handoff": run.handoff,
+                }
+            )
+            return finish(run)
 
         try:
             output = _execute_step(step, runtime)
@@ -858,6 +916,16 @@ def run_recipe(
             error = f"{type(exc).__name__}: {exc}"
             run.steps.append(
                 StepRun(step.id, step.uses, "failed", error=error, elapsed_ms=elapsed_ms)
+            )
+            emit(
+                {
+                    "type": "step_failed",
+                    "index": index,
+                    "step_id": step.id,
+                    "uses": step.uses,
+                    "error": error,
+                    "elapsed_ms": elapsed_ms,
+                }
             )
             if step.on_error == "continue":
                 continue
@@ -871,11 +939,19 @@ def run_recipe(
                     error=error,
                 )
                 run.finished_at = _now()
-                return run
+                emit(
+                    {
+                        "type": "needs_agent",
+                        "index": index,
+                        "step_id": step.id,
+                        "handoff": run.handoff,
+                    }
+                )
+                return finish(run)
             run.status = "failed"
             run.error = f"{step.id}: {error}"
             run.finished_at = _now()
-            return run
+            return finish(run)
 
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         ctx.setdefault("steps", {})[step.output_key] = output
@@ -883,9 +959,19 @@ def run_recipe(
         run.steps.append(
             StepRun(step.id, step.uses, "ok", output=output, elapsed_ms=elapsed_ms)
         )
+        emit(
+            {
+                "type": "step_ok",
+                "index": index,
+                "step_id": step.id,
+                "uses": step.uses,
+                "elapsed_ms": elapsed_ms,
+                "output": output,
+            }
+        )
 
     run.finished_at = _now()
-    return run
+    return finish(run)
 
 
 def resume_recipe(
@@ -896,6 +982,7 @@ def resume_recipe(
     page: Any = None,
     http_client: Any = None,
     allow_hosts: Iterable[str] | None = None,
+    on_event: Callable[[dict[str, Any]], None] | None = None,
 ) -> RecipeRun:
     """用 agent 的回答从检查点继续执行。
 
@@ -935,6 +1022,7 @@ def resume_recipe(
         page=page,
         http_client=http_client,
         allow_hosts=allow_hosts,
+        on_event=on_event,
     )
 
 

@@ -76,6 +76,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--only", type=str, default="", help="只体检指定平台（逗号分隔）")
     parser.add_argument("--browser", action="store_true", help="启用免登录动态探针")
     parser.add_argument("--json", type=str, default="", help="落盘 JSON 报告")
+    parser.add_argument("--html", type=str, default="", help="落盘单文件 HTML 报告")
     parser.add_argument("--strict", action="store_true", help="WARN 也返回退出码 1")
     parser.add_argument("--init", action="store_true", help="生成配置模板 ack_health.yaml")
     parser.add_argument("--wait-ms", type=int, default=3000, help="动态探针等待渲染毫秒数")
@@ -153,6 +154,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         path = report.write(args.json)
         print(f"[INFO] JSON 报告: {path}")
+    if args.html:
+        from anti_crawl_kit.report import write_html
+
+        path = write_html(report.to_dict(), args.html, kind="health")
+        print(f"[INFO] HTML 报告: {path}")
 
     if report.has_fail():
         return 1

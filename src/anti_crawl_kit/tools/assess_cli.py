@@ -20,6 +20,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from anti_crawl_kit.assess import assess, load_assessment_config
+from anti_crawl_kit.report import write_html
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -30,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", required=True, help="评估配置 YAML/JSON")
     parser.add_argument("--out", default="", help="输出目录（默认 runs/assessment-<platform>）")
     parser.add_argument("--no-audit", action="store_true", help="跳过 G1 路径审计")
+    parser.add_argument("--html", default="", help="HTML 报告路径（默认 <out>/assessment.html）")
     parser.add_argument(
         "--channel",
         default="",
@@ -61,8 +63,11 @@ def main(argv: list[str] | None = None) -> int:
 
     print(report.render())
     json_path, md_path = report.write(out_dir)
+    html_path = Path(args.html) if args.html else Path(out_dir) / "assessment.html"
+    write_html(report.to_dict(), html_path, kind="assess")
     print(f"\n[INFO] JSON: {json_path}")
     print(f"[INFO] Markdown: {md_path}")
+    print(f"[INFO] HTML: {html_path}")
     return 0 if report.decision in ("go", "conditional_go") else 1
 
 

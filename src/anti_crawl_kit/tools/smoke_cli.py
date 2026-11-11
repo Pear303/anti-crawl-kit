@@ -47,6 +47,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="浏览器通道（默认自动：chrome → msedge）",
     )
     parser.add_argument("--json", type=str, default="", help="落盘 JSON 报告")
+    parser.add_argument("--html", type=str, default="", help="落盘单文件 HTML 报告")
     parser.add_argument("--strict", action="store_true", help="SKIP 也返回退出码 1")
     parser.add_argument("--repeat", type=int, default=1, help="每个用例重复次数（默认 1）")
     return parser
@@ -158,6 +159,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         path = report.write(args.json)
         print(f"[INFO] JSON 报告: {path}")
+    if args.html:
+        from anti_crawl_kit.report import write_html
+
+        path = write_html(report.to_dict(), args.html, kind="smoke")
+        print(f"[INFO] HTML 报告: {path}")
 
     if report.has_fail():
         return 1

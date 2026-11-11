@@ -232,6 +232,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 | **固化脚本** | `scripts/*.py`、`platforms/*.yaml`、`path_audit` 配置 | **必须**：生产环境不能每次让 LLM 现场生成 |
 | **MCP 接入** | `ack-mcp`（15 tools / 3 prompts / 4 resources） | **可选**：给非工程 agent 用；coding agent 读本文件即可 |
 | **立项评估** | `ack-assess`（G0~G4 + Go/No-Go） | **必须**：决定做不做、缺口在哪 |
+| **结果展示** | `ack-report`（单文件 HTML）、`ack-ui`（本地控制台） | **可选**：给人看结论、跑 recipe，不替代判断 |
 
 ---
 
@@ -244,7 +245,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
   - 按需：`pip install -e ".[browser]"` / `".[http]"` / `".[config]"` / `".[mcp]"`
 - `requirements.txt` 由 `scripts/gen_requirements.py` 生成，勿手改
 - 临时文件用 `C:\Windows\Temp\opencode`
-- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke` / `ack-mcp` / `ack-assess`
+- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke` / `ack-mcp` / `ack-assess` / `ack-report` / `ack-ui`
 
 ```bash
 python -m pytest tests -q             # 离线测试，应全绿

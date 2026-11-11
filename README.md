@@ -56,6 +56,10 @@ HTTP 侧走 curl_cffi，403/429 先分类再决定要不要开浏览器。签名
 白名单和清理阈值。`recipe` 用来编排确定性步骤，中间可以停下来交给 agent
 判断；`ack-mcp` 把这些能力包成 MCP 工具。
 
+结果不只在终端里看：`ack-report` 把审计、体检、冒烟、评估的 JSON 转成
+单文件 HTML（样式和脚本都内嵌，双击就能开）；`ack-ui` 起一个只监听本机
+的控制台，选配方、填参数、跑、看实时日志，agent 检查点也能在页面上继续。
+
 立项阶段可以用 `ack-assess` 走 G0~G4，输出 Go/No-Go 和缺口清单。
 
 ## 命令行
@@ -91,6 +95,14 @@ ack-mcp --transport http --port 8765
 
 # 技术验证评估
 ack-assess --config examples/assessments/books.yaml
+
+# JSON 报告转单文件 HTML（--dir 批量转并生成索引）
+ack-report --input runs/health.json
+ack-report --dir runs
+
+# 本地 Web 控制台：选配方、填参数、跑、看日志
+ack-ui
+ack-ui --headed --channel msedge
 ```
 
 `ack-smoke`、`ack-assess`、`ack-mcp` 都支持 `--channel msedge` 走 Edge。
@@ -122,6 +134,7 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 - 找数据：09 JS 包找接口、19 数据源选型、22 签名剥离、23 路径审计
 - 稳定性：03 防风控、05 排障、06 踩坑、24 健康体检、25 冒烟
 - Agent：12 任务模板、15 工作流、17 发现与固化、26 MCP 接入、27 技术验证
+- 可视化：29 报告与控制台
 - 案例：21 站点形态实测、28 掘金真实采集
 
 `examples/` 有 15 个能直接跑的脚本，`tools/` 是命令行入口，

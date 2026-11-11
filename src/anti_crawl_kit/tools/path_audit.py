@@ -55,6 +55,7 @@ from typing import Any, Callable
 from ..empty_shell import detect_empty_shell
 from ..http_signed import SignedEndpoint, classify_signed_response
 from ..page_shape import classify_page_shape
+from ..report import write_html
 from ..run_report import RunReport
 from ..state_extract import extract_state, pick_path
 
@@ -1711,9 +1712,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     report_path, markdown_path = run.write(out_dir)
+    html_path = write_html(run.report().to_dict(), out_dir / "audit.html", kind="audit")
     _print_summary(run)
     print(f"[out] {report_path}")
     print(f"[out] {markdown_path}")
+    print(f"[out] {html_path}")
     return run.exit_code()
 
 
