@@ -34,6 +34,23 @@ $env:ACK_BROWSER="1"; python -m pytest tests -m browser -q
 
 > 浏览器测试会启动系统 Chrome，默认跑在无头模式；失败时先确认 Chrome 能正常启动。
 
+### Windows / PowerShell
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -e ".[all,dev]"
+.venv\Scripts\python.exe -m pytest tests -q
+```
+
+PowerShell 禁止执行脚本时，直接用 `.venv\Scripts\python.exe` 调用即可，
+不需要 `Activate.ps1`。
+
+GitHub 直连不稳定时可以用镜像 clone：
+
+```bash
+git clone https://gh-proxy.com/https://github.com/Pear303/anti-crawl-kit.git
+```
+
 ## 先跑几个例子
 
 ```bash
@@ -81,19 +98,20 @@ HTTP 侧走 curl_cffi，403/429 先分类再决定要不要开浏览器。签名
 ## 命令行
 
 ```bash
-# 一站式探测：给 URL 和目标字段，直接出结论
-ack-probe --url "https://目标站/页面" --field fansNum --quick
+# 一站式探测：给 URL 和目标字段，直接出结论（URL 换成你的目标站）
+ack-probe --url "https://example.com" --field fansNum --quick
 
 # 页面结构 / 接口 / 框架
-ack-dom --url "https://目标站/list"
+ack-dom --url "https://quotes.toscrape.com/"
 
 # HTML 里没数据时，从 JS 包找接口（零浏览器）
-ack-hunt --url "https://目标站/page" --field fansNum
+# 退出码：0=找到候选，1=没找到（正常业务结果），2=抓取/参数错误
+ack-hunt --url "https://example.com" --field fansNum
 
 # HTTP 够不够，两路实测
 ack-bench --repeat 3
 
-# 14 条采集路径逐条审计
+# 14 条采集路径逐条审计（默认写 runs/<platform>-<date>/）
 ack-audit --config examples/platforms/bilibili_audit.yaml
 
 # 平台健康体检（--init 生成的是 demo 模板，直接跑会 FAIL）
@@ -110,11 +128,13 @@ ack-smoke --channel msedge
 ack-mcp
 ack-mcp --transport http --port 8765
 
-# 技术验证评估
+# 技术验证评估（默认写 runs/assessment-<name>/）
 ack-assess --config examples/assessments/books.yaml
 
 # JSON 报告转单文件 HTML（--dir 递归扫描子目录并生成索引）
+# runs/health.json 是示例路径，需先由 ack-health 生成
 ack-report --input runs/health.json
+ack-report --input benchmarks/baseline-r3/results.json   # 仓库里现成的示例
 ack-report --dir runs
 ack-report --dir runs --out reports        # 输出到 reports/，保留子目录结构
 
@@ -124,6 +144,19 @@ ack-ui --headed --channel msedge
 ```
 
 `ack-smoke`、`ack-assess`、`ack-mcp` 都支持 `--channel msedge` 走 Edge。
+
+`ack-ui` 默认监听 `http://127.0.0.1:8766`，可用 `--host` / `--port` / `--open` 调整。
+HTTP API：
+
+```text
+GET  /api/recipes                      配方列表（含 id 和 path）
+POST /api/run                          {"recipe": "<id 或相对路径>", "inputs": {...}}
+GET  /api/jobs/<id>                    job 状态
+GET  /api/jobs/<id>/events             SSE 事件流
+GET  /api/jobs/<id>/report             本次运行的 HTML 报告
+```
+
+完整契约和页面约束见 [docs/29](docs/29-可视化报告与本地控制台.md)。
 
 ## 采集路径的优先级
 
