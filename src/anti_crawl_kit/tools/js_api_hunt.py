@@ -158,8 +158,14 @@ def _print_findings(result, *, limit: int = 30) -> None:
         print("  - 页面本身是 SSR，数据在 HTML 里（用 dom_probe.py 看）")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="从 JS 包里找真实接口")
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="从 JS 包里找真实接口",
+        epilog=(
+            "退出码：0=找到接口候选；1=未找到（正常业务结果）；"
+            "2=运行错误（页面/JS 抓取失败或参数错误）"
+        ),
+    )
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--url", help="页面 URL")
     source.add_argument("--html", help="本地 HTML 文件路径")
@@ -229,7 +235,7 @@ def main() -> int:
         help="不递归 JS 里引用的动态 chunk（只扫入口）",
     )
     parser.add_argument("--out", default="", help="把结果写入 JSON 文件")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     cookie_raw = args.cookie
     if args.cookie_file:
@@ -237,9 +243,14 @@ def main() -> int:
     cookies = parse_cookie_header(cookie_raw)
 
     html: str | None = None
+    fetch_failed = False
     page_url = args.base_url or args.url
     if args.html:
-        html = Path(args.html).read_text(encoding="utf-8", errors="replace")
+        try:
+            html = Path(args.html).read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            print(f"读取 HTML 失败: {exc}", file=sys.stderr)
+            return 2
         if not page_url:
             print("使用 --html 时必须提供 --base-url（用于拼相对路径）", file=sys.stderr)
             return 2
@@ -257,6 +268,7 @@ def main() -> int:
         )
         html = html_text or ""
         if not html_text:
+            fetch_failed = True
             print(
                 f"[warn] 页面 HTML 抓取失败: status={status} error={error}",
                 file=sys.stderr,
@@ -283,6 +295,10 @@ def main() -> int:
         )
         print(f"[info] 浏览器发现 {len(browser_scripts)} 个 JS", file=sys.stderr)
 
+    def _progress(done: int, total: int, _src: str) -> None:
+        # 长任务给个进度，避免被误认为卡死；写 stderr，不污染 stdout 的候选列表
+        print(f"[hunt] 已扫描 {done}/{total} 个 JS", file=sys.stderr, flush=True)
+
     result = hunt_api(
         page_url=page_url,
         html=html,
@@ -296,6 +312,7 @@ def main() -> int:
         follow_loaders=args.all_chunks,
         api_host=args.api_host,
         extra_scripts=browser_scripts,
+        progress=_progress if not args.no_fetch else None,
     )
 
     if args.filter:
@@ -324,7 +341,8 @@ def main() -> int:
 
     if result.endpoints:
         return 0
-    if result.failed_scripts and not result.scripts:
+    # 页面没抓到，或所有 JS 都下载失败：属于运行错误，不是「没找到」
+    if fetch_failed or (result.failed_scripts and not result.scripts):
         return 2
     return 1
 

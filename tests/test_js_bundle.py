@@ -363,6 +363,29 @@ def test_hunt_api_warns_on_spa_shell(monkeypatch):
     assert any("SPA" in item for item in result.warnings)
 
 
+def test_hunt_api_progress_callback(monkeypatch):
+    """长任务进度回调：下载过程中报 done/total，结束后补一次 100%。"""
+    html = '<script src="/a.js"></script><script src="/b.js"></script>'
+    calls = []
+
+    def fake_get(url, **kwargs):
+        if url.endswith(".js"):
+            return 200, "var a=1;", ""
+        return 404, "", "HTTP 404"
+
+    monkeypatch.setattr(js_bundle, "_http_get", fake_get)
+    result = hunt_api(
+        "https://example.com/page",
+        html=html,
+        max_scripts=5,
+        progress=lambda done, total, src: calls.append((done, total, src)),
+    )
+
+    assert result.scanned_scripts == 2
+    assert calls[0][0] == 1
+    assert calls[-1] == (2, 2, "")
+
+
 def test_hunt_api_no_fetch_lists_scripts_only():
     result = hunt_api(
         "https://www.baidu.com/my/index",

@@ -580,12 +580,21 @@ def _http_client(config: AuditConfig):
 def _js_hunt(config: AuditConfig):
     from ..js_bundle import hunt_api
 
+    def _progress(done: int, total: int, src: str) -> None:
+        # 每 5 个报一次，避免 60 行进度淹没最终摘要；首尾各报一次
+        if done != 1 and done != total and done % 5 != 0:
+            return
+        short = src if len(src) <= 80 else f"{src[:77]}..."
+        suffix = f" {short}" if short else ""
+        print(f"[audit] js_bundle {done}/{total}{suffix}", flush=True)
+
     return hunt_api(
         config.test_url,
         cookies=config.cookies or None,
         fields=config.js_fields,
         max_scripts=config.max_scripts,
         timeout=config.timeout,
+        progress=_progress,
     )
 
 

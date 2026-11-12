@@ -46,7 +46,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from urllib.parse import urljoin, urlparse
 
 from .user_agent import get_ua_for_impersonate
@@ -812,6 +812,7 @@ def hunt_api(
     api_host: str = "",
     extra_scripts: Iterable[str] = (),
     source_mode: str = "html",
+    progress: Callable[[int, int, str], None] | None = None,
 ) -> JsHuntResult:
     """完整流程：HTML → script 列表 → 下载 JS → 找 baseURL / 接口 / 字段。
 
@@ -828,6 +829,7 @@ def hunt_api(
         extra_scripts: 额外入口，通常是浏览器 Network 里枚举到的 JS URL。
             用于补 HTML 里看不到的动态 import / modulepreload。
         source_mode: 记录脚本来源（html / browser / html+browser）。
+        progress: 可选进度回调 ``(已扫描, 总数, 当前URL)``，用于长任务输出。
     """
     result = JsHuntResult(page_url=page_url, source_mode=source_mode)
     referer = referer or page_url
@@ -876,6 +878,8 @@ def hunt_api(
             )
             continue
         js_texts.append((src, text))
+        if progress is not None:
+            progress(len(js_texts), max(len(result.scripts), len(js_texts)), src)
 
         # 任意 JS 都可能引用动态 chunk，不再只对「短小加载器」跟进
         if follow_loaders and len(js_texts) < max_scripts:
@@ -892,6 +896,12 @@ def hunt_api(
                     queue.append(nested)
 
     result.scanned_scripts = len(js_texts)
+    if progress is not None:
+        progress(
+            result.scanned_scripts,
+            max(len(result.scripts), result.scanned_scripts),
+            "",
+        )
     if result.scanned_scripts < len(result.scripts):
         result.warnings.append(
             f"只扫描了 {result.scanned_scripts}/{len(result.scripts)} 个 JS"
