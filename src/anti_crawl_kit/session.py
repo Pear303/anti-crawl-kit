@@ -330,7 +330,9 @@ class BrowserSession:
             )
         if gap == 1:
             logger.warning(
-                "[WARN] Chrome %s 与 patchright 期望 Chromium %s 相差 1 个大版本，建议升级 patchright",
+                "[WARN] Chrome %s 与 patchright 期望 Chromium %s 相差 1 个大版本，"
+                "通常可以正常使用；如果遇到页面空白或导航超时，升级 patchright："
+                "pip install -U patchright；确认无影响时可传 skip_version_check=True 跳过检查",
                 chrome_major,
                 expected_major,
             )

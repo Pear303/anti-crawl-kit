@@ -477,10 +477,11 @@ def make_handler(service: UiService):
 def serve(service: UiService, host: str = "127.0.0.1", port: int = 8766) -> None:
     server = ThreadingHTTPServer((host, port), make_handler(service))
     server.daemon_threads = True
-    print(f"[OK] ack-ui 已启动: http://{host}:{port}")
+    # 后台启动时 stdout 默认有缓冲，flush 后日志才能立即看到
+    print(f"[OK] ack-ui 已启动: http://{host}:{port}", flush=True)
     if host not in ("127.0.0.1", "localhost", "::1"):
-        print("[WARN] 当前监听的不是本机地址，局域网内其他人也能访问。")
-    print("[INFO] Ctrl+C 停止")
+        print("[WARN] 当前监听的不是本机地址，局域网内其他人也能访问。", flush=True)
+    print("[INFO] Ctrl+C 停止", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
