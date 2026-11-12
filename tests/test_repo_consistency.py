@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -75,13 +76,26 @@ def test_markdown_links_exist() -> None:
 
 
 def test_no_sensitive_profiles_in_repo() -> None:
-    """profiles/ 下不应有 Cookies / Login Data 等真实登录态。"""
-    profiles = ROOT / "profiles"
-    if not profiles.exists():
+    """profiles/ 下不应有 Cookies / Login Data 等真实登录态。
+
+    只看 git 跟踪的文件：本地跑 examples 会生成 ``profiles/<platform>/``，
+    那是临时浏览器数据，本来就不该进仓库，也不该让本地测试变红。
+    """
+    try:
+        output = subprocess.run(
+            ["git", "ls-files", "-z", "--", "profiles"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
         return
     sensitive = [
-        path
-        for path in profiles.rglob("*")
-        if path.name in {"Cookies", "Login Data", "Login Data For Account", "Web Data"}
+        item
+        for item in output.split("\0")
+        if item
+        and Path(item).name
+        in {"Cookies", "Login Data", "Login Data For Account", "Web Data"}
     ]
     assert not sensitive, f"发现真实登录态文件: {sensitive}"
