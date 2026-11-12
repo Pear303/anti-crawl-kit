@@ -98,23 +98,33 @@ class UiService:
             out.append(item)
         return out
 
-    def recipe_detail(self, rel_path: str) -> dict[str, Any]:
-        recipe = load_recipe(self._resolve_recipe(rel_path))
+    def recipe_detail(self, ref: str) -> dict[str, Any]:
+        path = self._resolve_recipe(ref)
+        recipe = load_recipe(path)
         data = recipe.to_dict()
-        data["path"] = rel_path
+        # 统一回显相对路径，传 id 时也能拿到真实文件位置
+        data["path"] = path.relative_to(self.recipes_dir).as_posix()
         return data
 
-    def _resolve_recipe(self, rel_path: str) -> Path:
-        if not rel_path:
+    def _resolve_recipe(self, ref: str) -> Path:
+        """解析配方引用：先按相对路径，再按配方 id。
+
+        ``/api/recipes`` 同时返回 ``id`` 和 ``path``，前端如果只传 ``id``，
+        这里也能找到对应文件，避免直接 404。
+        """
+        if not ref:
             raise FileNotFoundError("缺少 recipe 路径")
-        target = (self.recipes_dir / rel_path).resolve()
+        target = (self.recipes_dir / ref).resolve()
         try:
             target.relative_to(self.recipes_dir)
         except ValueError as exc:
             raise PermissionError("配方路径越界") from exc
-        if not target.is_file():
-            raise FileNotFoundError(f"配方不存在: {rel_path}")
-        return target
+        if target.is_file():
+            return target
+        for row in list_recipes(self.recipes_dir):
+            if row.get("valid") and row.get("id") == ref:
+                return Path(row["path"]).resolve()
+        raise FileNotFoundError(f"配方不存在: {ref}")
 
     # ── 报告 ──────────────────────────────────────────
     def runs(self) -> list[dict[str, Any]]:
@@ -140,14 +150,16 @@ class UiService:
     # ── 作业 ──────────────────────────────────────────
     def start(
         self,
-        rel_path: str,
+        ref: str,
         inputs: dict[str, Any] | None = None,
         with_browser: bool = False,
     ) -> str:
-        recipe = load_recipe(self._resolve_recipe(rel_path))
+        path = self._resolve_recipe(ref)
+        recipe = load_recipe(path)
         job = UiJob(
             id=uuid.uuid4().hex[:10],
-            recipe_path=rel_path,
+            # 作业里统一存相对路径，恢复执行时不受调用方传的是 id 还是 path 影响
+            recipe_path=path.relative_to(self.recipes_dir).as_posix(),
             recipe_id=recipe.id,
             inputs=dict(inputs or {}),
             with_browser=bool(with_browser),

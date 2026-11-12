@@ -25,6 +25,9 @@ from anti_crawl_kit.session import BrowserSession
 
 
 def main() -> int:
+    # Windows 默认 GBK 控制台无法输出 emoji；统一成 UTF-8，遇到无法编码的字符用 ? 代替
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser()
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()

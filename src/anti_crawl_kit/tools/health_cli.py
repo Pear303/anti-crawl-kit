@@ -109,7 +109,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         path.write_text(_TEMPLATE, encoding="utf-8")
         print(f"[OK] 已生成配置模板: {path}")
-        print("[INFO] 填写模块/类名/选择器后运行: ack-health --config ack_health.yaml")
+        print("[WARN] 这是 demo 模板，直接运行会 FAIL（模块/类名/cookie 名都还是示例值）。")
+        print("[INFO] 先把 platforms 里的模块、类名、cookie 名、选择器改成你的项目，再运行:")
+        print("       ack-health --config ack_health.yaml")
         return 0
 
     config_path = Path(args.config) if args.config else _find_default_config()

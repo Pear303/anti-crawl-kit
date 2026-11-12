@@ -5,8 +5,9 @@
 
     ack-report --input runs/audit.json                 # 生成同目录 audit.html
     ack-report --input runs/audit.json --out report.html
-    ack-report --dir runs                              # 批量转换 + 生成 index.html
-    ack-report --dir runs --out runs/index.html
+    ack-report --dir runs                              # 递归批量转换 + 生成 index.html
+    ack-report --dir runs --out reports                # 输出到 reports/，保留子目录结构
+    ack-report --dir runs --out reports/index.html     # 只指定索引位置
 
 支持 ``audit`` / ``health`` / ``smoke`` / ``assess`` / ``run`` 五种报告，
 类型默认自动识别，也可以用 ``--kind`` 指定。
@@ -18,6 +19,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -30,6 +32,19 @@ from anti_crawl_kit.report import (
 
 # 目录批量转换时，这些文件名不当作报告。
 _SKIP_NAMES = {"index.html", "report.html"}
+# 递归扫描时跳过的目录：避免把 cookie/profile、依赖和构建产物转成 HTML。
+_SKIP_DIRS = {
+    ".git",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    "profiles",
+}
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -40,7 +55,12 @@ def _build_parser() -> argparse.ArgumentParser:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--input", type=str, help="单个 JSON 报告")
     source.add_argument("--dir", type=str, help="报告目录（批量转换）")
-    parser.add_argument("--out", type=str, default="", help="输出 HTML 路径")
+    parser.add_argument(
+        "--out",
+        type=str,
+        default="",
+        help="输出路径：单文件模式为 HTML 文件；--dir 模式为输出目录，或以 .html 结尾的索引路径",
+    )
     parser.add_argument(
         "--kind",
         default="auto",
@@ -85,30 +105,55 @@ def _verdict(data: dict, kind: str) -> str:
     return str(data.get("status") or "-").upper()
 
 
-def _convert_dir(directory: Path, out: Path) -> int:
-    sources = sorted(
+def _iter_json(directory: Path) -> list[Path]:
+    """递归找报告 JSON，跳过 profile/依赖/构建目录。"""
+    return sorted(
         path
-        for path in directory.glob("*.json")
-        if path.name not in _SKIP_NAMES and path.is_file()
+        for path in directory.rglob("*.json")
+        if path.name not in _SKIP_NAMES
+        and path.is_file()
+        and not any(part in _SKIP_DIRS for part in path.relative_to(directory).parts[:-1])
     )
+
+
+def _relative_link(target: Path, base: Path) -> str:
+    """索引里的链接：优先相对路径，跨盘时退回绝对路径。"""
+    try:
+        return target.relative_to(base).as_posix()
+    except ValueError:
+        try:
+            return Path(os.path.relpath(target, base)).as_posix()
+        except ValueError:
+            return target.as_posix()
+
+
+def _convert_dir(directory: Path, out: Path) -> int:
+    sources = _iter_json(directory)
     if not sources:
         print(f"[FAIL] 目录里没有 JSON 报告: {directory}", file=sys.stderr)
         return 2
 
+    # --out 以 .html 结尾时只决定索引位置；否则当作输出目录，保留子目录结构
+    index_is_file = out.suffix.lower() == ".html"
+    out_root = out.parent if index_is_file else out
+    index_path = out if index_is_file else out_root / "index.html"
+
     entries = []
     failures = 0
     for source in sources:
-        target = source.with_suffix(".html")
+        rel = source.relative_to(directory).with_suffix(".html")
+        target = source.with_suffix(".html") if index_is_file else out_root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
         try:
             entry = _convert_file(source, target, "auto", "")
         except Exception as exc:
             failures += 1
-            print(f"[WARN] 跳过 {source.name}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            print(f"[WARN] 跳过 {source}: {type(exc).__name__}: {exc}", file=sys.stderr)
             continue
-        print(f"[OK] {source.name} -> {target.name} ({entry['kind']})")
+        print(f"[OK] {source.relative_to(directory)} -> {target} ({entry['kind']})")
         entries.append(
             {
-                "path": target.name,
+                "path": _relative_link(target, index_path.parent),
                 "title": source.stem,
                 "kind": entry["kind"],
                 "verdict": entry["verdict"],
@@ -117,7 +162,6 @@ def _convert_dir(directory: Path, out: Path) -> int:
             }
         )
 
-    index_path = out if out.suffix.lower() == ".html" else directory / "index.html"
     index_path.parent.mkdir(parents=True, exist_ok=True)
     index_path.write_text(
         render_index(entries, title=f"{directory.name} · 报告索引"),

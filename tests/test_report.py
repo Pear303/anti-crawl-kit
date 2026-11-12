@@ -271,5 +271,67 @@ def test_cli_converts_directory(tmp_path: Path):
     assert "assess.html" in index
 
 
+def test_cli_converts_directory_recursively(tmp_path: Path):
+    """ack-audit 默认写 runs/<platform>-<date>/，--dir 必须能扫到子目录。"""
+    runs = tmp_path / "runs"
+    nested = runs / "bilibili-2026-11-12"
+    nested.mkdir(parents=True)
+    (nested / "health.json").write_text(
+        json.dumps(_health_data(), ensure_ascii=False), encoding="utf-8"
+    )
+    code = report_main(["--dir", str(runs)])
+    assert code == 0
+    assert (nested / "health.html").is_file()
+    index = (runs / "index.html").read_text(encoding="utf-8")
+    assert "bilibili-2026-11-12/health.html" in index
+
+
+def test_cli_skips_profile_directory(tmp_path: Path):
+    """profile 目录里的 cookie JSON 不是报告，不能被转成 HTML。"""
+    runs = tmp_path / "runs"
+    profiles = runs / "profiles"
+    profiles.mkdir(parents=True)
+    (profiles / "cookies.json").write_text('{"cookies": []}', encoding="utf-8")
+    (runs / "health.json").write_text(
+        json.dumps(_health_data(), ensure_ascii=False), encoding="utf-8"
+    )
+    code = report_main(["--dir", str(runs)])
+    assert code == 0
+    assert (runs / "health.html").is_file()
+    assert not (profiles / "cookies.html").exists()
+
+
+def test_cli_dir_out_directory(tmp_path: Path):
+    """--out 不是 .html 时当作输出目录，保留子目录结构。"""
+    runs = tmp_path / "runs"
+    nested = runs / "bilibili-2026-11-12"
+    nested.mkdir(parents=True)
+    (nested / "health.json").write_text(
+        json.dumps(_health_data(), ensure_ascii=False), encoding="utf-8"
+    )
+    out = tmp_path / "reports"
+    code = report_main(["--dir", str(runs), "--out", str(out)])
+    assert code == 0
+    assert (out / "bilibili-2026-11-12" / "health.html").is_file()
+    assert (out / "index.html").is_file()
+    assert not (nested / "health.html").exists()
+    index = (out / "index.html").read_text(encoding="utf-8")
+    assert "bilibili-2026-11-12/health.html" in index
+
+
+def test_cli_dir_out_index_path(tmp_path: Path):
+    """--out 以 .html 结尾时只决定索引位置，报告仍写输入目录。"""
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    (runs / "health.json").write_text(
+        json.dumps(_health_data(), ensure_ascii=False), encoding="utf-8"
+    )
+    index_path = tmp_path / "reports" / "index.html"
+    code = report_main(["--dir", str(runs), "--out", str(index_path)])
+    assert code == 0
+    assert (runs / "health.html").is_file()
+    assert index_path.is_file()
+
+
 def test_cli_rejects_missing_file(tmp_path: Path):
     assert report_main(["--input", str(tmp_path / "nope.json")]) == 2

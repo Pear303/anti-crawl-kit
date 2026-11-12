@@ -24,9 +24,9 @@ def _iter_markdown() -> list[Path]:
 
 def test_readme_example_count_matches_files() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    # 兼容两种写法：目录树「examples/ # N 个可运行示例」和正文「`examples/` 有 N 个能直接跑的脚本」。
+    # 兼容几种写法：目录树「examples/ # N 个可运行示例」、正文「`examples/` 有 N 个脚本」等。
     match = re.search(
-        r"examples/[^\n]{0,30}?(\d+)\s*个(?:可运行示例|能直接跑的脚本|可直接跑的脚本)",
+        r"examples/[^\n]{0,30}?(\d+)\s*个(?:可运行示例|能直接跑的脚本|可直接跑的脚本|脚本)",
         readme,
     )
     assert match, "README 里找不到 examples 的脚本数量说明"

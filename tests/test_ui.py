@@ -93,6 +93,20 @@ def test_recipes_and_detail(service: UiService):
     assert detail["path"] == "local_demo.yaml"
 
 
+def test_start_and_detail_by_recipe_id(service: UiService):
+    """前端从 /api/recipes 拿到 id 后，直接用 id 也能启动和查看配方。"""
+    detail = service.recipe_detail("local_demo")
+    assert detail["id"] == "local_demo"
+    assert detail["path"] == "local_demo.yaml"
+
+    job_id = service.start("local_demo", {"name": "world"})
+    snapshot = _wait(service, job_id)
+    assert snapshot["status"] == "done", snapshot
+    assert snapshot["recipe_id"] == "local_demo"
+    # 作业内部统一存相对路径，恢复执行不依赖调用方传的是什么
+    assert snapshot["recipe_path"] == "local_demo.yaml"
+
+
 def test_run_emits_events_and_report(service: UiService):
     job_id = service.start("local_demo.yaml", {"name": "world"})
     snapshot = _wait(service, job_id)
@@ -170,11 +184,12 @@ def test_http_api_end_to_end(service: UiService):
         assert status == 200
         assert "ack-ui" in body.decode("utf-8")
 
+        # 用 /api/recipes 返回的 id 启动，而不是文件路径
         status, body = _http(
             port,
             "POST",
             "/api/run",
-            {"recipe": "local_demo.yaml", "inputs": {"name": "world"}},
+            {"recipe": "local_demo", "inputs": {"name": "world"}},
         )
         assert status == 200
         job_id = json.loads(body)["job_id"]

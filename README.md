@@ -18,7 +18,23 @@ pip install -e ".[all,dev]"
 
 不装成包也能跑，examples 和 tools 会自动把 `src/` 加进 `sys.path`。
 
-## 先跑两个例子
+装完先验证（离线，不需要浏览器）：
+
+```bash
+python -m pytest tests -q
+python -m ruff check src tests
+```
+
+最小安装 `.[dev]` 时，依赖浏览器 / HTTP / YAML / MCP 的用例会自动跳过，
+剩下的应该全绿。装了 `.[browser]` 后可以跑真实浏览器集成测试：
+
+```powershell
+$env:ACK_BROWSER="1"; python -m pytest tests -m browser -q
+```
+
+> 浏览器测试会启动系统 Chrome，默认跑在无头模式；失败时先确认 Chrome 能正常启动。
+
+## 先跑几个例子
 
 ```bash
 python examples/01_hello_browser.py   # 启动系统 Chrome，看 webdriver 是不是 false
@@ -80,8 +96,9 @@ ack-bench --repeat 3
 # 14 条采集路径逐条审计
 ack-audit --config examples/platforms/bilibili_audit.yaml
 
-# 平台健康体检
+# 平台健康体检（--init 生成的是 demo 模板，直接跑会 FAIL）
 ack-health --init
+# 先把 ack_health.yaml 里的模块、类名、cookie 名、选择器改成你的项目，再运行：
 ack-health --config ack_health.yaml
 ack-health --config ack_health.yaml --browser
 
@@ -96,11 +113,12 @@ ack-mcp --transport http --port 8765
 # 技术验证评估
 ack-assess --config examples/assessments/books.yaml
 
-# JSON 报告转单文件 HTML（--dir 批量转并生成索引）
+# JSON 报告转单文件 HTML（--dir 递归扫描子目录并生成索引）
 ack-report --input runs/health.json
 ack-report --dir runs
+ack-report --dir runs --out reports        # 输出到 reports/，保留子目录结构
 
-# 本地 Web 控制台：选配方、填参数、跑、看日志
+# 本地 Web 控制台：选配方、填参数、跑、看日志（http://127.0.0.1:8766）
 ack-ui
 ack-ui --headed --channel msedge
 ```
@@ -138,8 +156,9 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 - 发布：30 发版与 PyPI
 - 案例：21 站点形态实测、28 掘金真实采集
 
-`examples/` 有 15 个能直接跑的脚本，`tools/` 是命令行入口，
-实现在 `src/anti_crawl_kit/tools/`。
+`examples/` 有 15 个脚本：01/02/05/10~15 可无参数直接运行；03 需要人工扫码登录；
+04 需要联网和浏览器；06/08/09 必须传 `--url`；07 必须传平台 YAML 配置。
+`tools/` 是命令行入口，实现在 `src/anti_crawl_kit/tools/`。
 
 ## 边界
 
