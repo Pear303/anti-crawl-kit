@@ -333,5 +333,73 @@ def test_cli_dir_out_index_path(tmp_path: Path):
     assert index_path.is_file()
 
 
+def _write_pair(tmp_path: Path, current: dict, baseline: dict) -> tuple[Path, Path]:
+    current_path = tmp_path / "current.json"
+    baseline_path = tmp_path / "baseline.json"
+    current_path.write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
+    baseline_path.write_text(json.dumps(baseline, ensure_ascii=False), encoding="utf-8")
+    return current_path, baseline_path
+
+
+def test_render_html_with_baseline_shows_diff():
+    current = _health_data()
+    baseline = _health_data()
+    baseline["results"][1]["status"] = "OK"
+    baseline["summary"] = {"OK": 2, "WARN": 0, "FAIL": 0, "SKIP": 0}
+
+    html = render_html(current, baseline=baseline)
+    assert "与基线对比" in html
+    assert "退化" in html
+    assert "FAIL" in html
+
+
+def test_cli_baseline_regression_returns_1(tmp_path: Path, capsys):
+    current = _health_data()
+    baseline = _health_data()
+    baseline["results"][1]["status"] = "OK"
+    baseline["summary"] = {"OK": 2, "WARN": 0, "FAIL": 0, "SKIP": 0}
+    current_path, baseline_path = _write_pair(tmp_path, current, baseline)
+
+    code = report_main(
+        ["--input", str(current_path), "--baseline", str(baseline_path)]
+    )
+    assert code == 1
+    out = capsys.readouterr().out
+    assert "退化 1" in out
+    assert "registry · b" in out
+    assert "OK -> FAIL" in out
+    assert (tmp_path / "current.html").is_file()
+
+
+def test_cli_baseline_no_change_returns_0(tmp_path: Path):
+    current = _health_data()
+    current_path, baseline_path = _write_pair(tmp_path, current, _health_data())
+    code = report_main(
+        ["--input", str(current_path), "--baseline", str(baseline_path)]
+    )
+    assert code == 0
+
+
+def test_cli_baseline_kind_mismatch_returns_2(tmp_path: Path, capsys):
+    current_path, baseline_path = _write_pair(
+        tmp_path, _health_data(), _smoke_data()
+    )
+    code = report_main(
+        ["--input", str(current_path), "--baseline", str(baseline_path)]
+    )
+    assert code == 2
+    assert "基线类型不一致" in capsys.readouterr().err
+
+
+def test_cli_baseline_rejects_directory_mode(tmp_path: Path, capsys):
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(_health_data()), encoding="utf-8")
+    code = report_main(
+        ["--dir", str(tmp_path), "--baseline", str(baseline_path)]
+    )
+    assert code == 2
+    assert "只支持 --input" in capsys.readouterr().err
+
+
 def test_cli_rejects_missing_file(tmp_path: Path):
     assert report_main(["--input", str(tmp_path / "nope.json")]) == 2

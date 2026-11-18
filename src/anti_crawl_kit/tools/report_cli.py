@@ -8,13 +8,15 @@
     ack-report --dir runs                              # 递归批量转换 + 生成 index.html
     ack-report --dir runs --out reports                # 输出到 reports/，保留子目录结构
     ack-report --dir runs --out reports/index.html     # 只指定索引位置
+    ack-report --input today.json --baseline last.json # 和基线对比，有退化退出码 1
 
-支持 ``audit`` / ``health`` / ``smoke`` / ``assess`` / ``run`` 五种报告，
-类型默认自动识别，也可以用 ``--kind`` 指定。
+支持 ``audit`` / ``health`` / ``smoke`` / ``assess`` / ``run`` / ``recipe``
+六种报告，类型默认自动识别，也可以用 ``--kind`` 指定。
 
 退出码：
-    0  成功
-    2  输入不存在 / JSON 读取失败 / 类型不支持
+    0  成功，且没有基线退化
+    1  基线对比发现退化（用例变差 / 指标下降 / 用例消失）
+    2  输入不存在 / JSON 读取失败 / 类型不支持 / 基线类型不一致
 """
 from __future__ import annotations
 
@@ -22,6 +24,7 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from anti_crawl_kit.report import (
     detect_kind,
@@ -29,6 +32,7 @@ from anti_crawl_kit.report import (
     render_index,
     write_html,
 )
+from anti_crawl_kit.report_diff import diff_reports
 
 # 目录批量转换时，这些文件名不当作报告。
 _SKIP_NAMES = {"index.html", "report.html"}
@@ -68,20 +72,41 @@ def _build_parser() -> argparse.ArgumentParser:
         help="报告类型（默认自动识别）",
     )
     parser.add_argument("--title", type=str, default="", help="覆盖页面标题")
+    parser.add_argument(
+        "--baseline",
+        type=str,
+        default="",
+        help="基线 JSON；只支持 --input 单文件，有退化时退出码 1",
+    )
     return parser
 
 
-def _convert_file(source: Path, out: Path, kind: str, title: str) -> dict[str, str]:
+def _convert_file(
+    source: Path,
+    out: Path,
+    kind: str,
+    title: str,
+    baseline: Path | None = None,
+) -> dict[str, Any]:
     data = load_json(source)
     resolved = detect_kind(data) if kind == "auto" else kind
-    write_html(data, out, kind=resolved, title=title)
-    return {
+    baseline_data = None
+    if baseline is not None:
+        baseline_data = load_json(baseline)
+        baseline_kind = detect_kind(baseline_data)
+        if baseline_kind != resolved:
+            raise ValueError(f"基线类型不一致：当前 {resolved}，基线 {baseline_kind}")
+    write_html(data, out, kind=resolved, title=title, baseline=baseline_data)
+    entry: dict[str, Any] = {
         "source": str(source),
         "out": str(out),
         "kind": resolved,
         "verdict": _verdict(data, resolved),
         "finished_at": str(data.get("finished_at") or ""),
     }
+    if baseline_data is not None:
+        entry["diff"] = diff_reports(data, baseline_data, resolved)
+    return entry
 
 
 def _verdict(data: dict, kind: str) -> str:
@@ -185,18 +210,36 @@ def _index_tone(verdict: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
+    if args.baseline and not args.input:
+        print("[FAIL] --baseline 只支持 --input 单文件模式", file=sys.stderr)
+        return 2
+
     if args.input:
         source = Path(args.input)
         if not source.is_file():
             print(f"[FAIL] 文件不存在: {source}", file=sys.stderr)
             return 2
+        baseline = Path(args.baseline) if args.baseline else None
+        if baseline is not None and not baseline.is_file():
+            print(f"[FAIL] 基线文件不存在: {baseline}", file=sys.stderr)
+            return 2
         out = Path(args.out) if args.out else source.with_suffix(".html")
         try:
-            entry = _convert_file(source, out, args.kind, args.title)
+            entry = _convert_file(source, out, args.kind, args.title, baseline)
         except Exception as exc:
             print(f"[FAIL] 转换失败: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 2
         print(f"[OK] {entry['source']} -> {entry['out']} ({entry['kind']})")
+        diff = entry.get("diff")
+        if diff:
+            print(
+                f"[DIFF] 退化 {diff['regressions']} · 改善 {diff['improvements']} · "
+                f"新增 {diff['added']} · 移除 {diff['removed']}"
+            )
+            for item in [*diff["items"], *diff["metrics"]]:
+                if item["change"] in ("regressed", "removed"):
+                    print(f"[DIFF] {item['label']}: {item['before']} -> {item['after']}")
+            return 1 if diff["regressions"] else 0
         return 0
 
     directory = Path(args.dir)

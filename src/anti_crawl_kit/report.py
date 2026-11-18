@@ -26,6 +26,8 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from .report_diff import CHANGE_LABELS, diff_reports
+
 __all__ = [
     "detect_kind",
     "render_html",
@@ -814,6 +816,72 @@ _SECTION_RENDERERS = {
 }
 
 
+# ── 基线对比 ─────────────────────────────────────────
+
+_DIFF_TONES = {
+    "regressed": "fail",
+    "improved": "ok",
+    "added": "info",
+    "removed": "warn",
+    "changed": "warn",
+    "same": "muted",
+}
+
+
+def _diff_tone(change: str) -> str:
+    return _DIFF_TONES.get(str(change), "muted")
+
+
+def _render_diff_table(title: str, rows: Iterable[Mapping[str, Any]]) -> str:
+    rows = list(rows)
+    if not rows:
+        return ""
+    body = []
+    for row in rows:
+        tone = _diff_tone(str(row.get("change")))
+        label = CHANGE_LABELS.get(str(row.get("change")), str(row.get("change")))
+        body.append(
+            f'<tr data-tone="{tone}"><td>{_esc(row.get("label"))}</td>'
+            f'<td class="mono">{_esc(row.get("before"))}</td>'
+            f'<td class="mono">{_esc(row.get("after"))}</td>'
+            f'<td><span class="pill tone-{tone}">{_esc(label)}</span></td></tr>'
+        )
+    return (
+        f'<h3 class="diff-title">{_esc(title)}</h3>'
+        f'<div class="table-wrap"><table><thead><tr>'
+        f"<th>项目</th><th>基线</th><th>当前</th><th>变化</th>"
+        f"</tr></thead><tbody>{''.join(body)}</tbody></table></div>"
+    )
+
+
+def _render_diff(diff: Mapping[str, Any]) -> str:
+    summary = [
+        _stat(
+            str(row.get("label")),
+            f'{row.get("before")} → {row.get("after")}',
+            _diff_tone(str(row.get("change"))),
+        )
+        for row in diff.get("summary") or []
+        if isinstance(row, Mapping)
+    ]
+    stats = _render_stats(summary) if summary else ""
+    metrics = _render_diff_table("指标", diff.get("metrics") or [])
+    items = _render_diff_table("用例 / 步骤", diff.get("items") or [])
+    if not metrics and not items:
+        items = '<p class="hint">没有可对比的条目。</p>'
+    return (
+        f'<section class="section" data-section>'
+        f'<div class="section-head"><h2>与基线对比</h2></div>'
+        f'<p class="hint">基线 {_esc(diff.get("before_at") or "-")} · '
+        f'当前 {_esc(diff.get("after_at") or "-")} · '
+        f'退化 {_esc(diff.get("regressions", 0))} · '
+        f'改善 {_esc(diff.get("improvements", 0))} · '
+        f'新增 {_esc(diff.get("added", 0))} · '
+        f'移除 {_esc(diff.get("removed", 0))}</p>'
+        f"{stats}{metrics}{items}</section>"
+    )
+
+
 # ── 页面骨架 ─────────────────────────────────────────
 
 _CSS = """
@@ -1006,6 +1074,8 @@ def _render_page(model: Mapping[str, Any], *, generated_at: str = "") -> str:
     if model.get("subtitle"):
         subtitle = f'<p class="sub">{_esc(model.get("subtitle"))}</p>'
 
+    diff_html = _render_diff(model["diff"]) if model.get("diff") else ""
+
     return f"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1026,6 +1096,7 @@ def _render_page(model: Mapping[str, Any], *, generated_at: str = "") -> str:
     </div>
   </header>
   {_render_stats(model.get("stats") or [])}
+  {diff_html}
   {''.join(sections)}
   <footer>由 anti-crawl-kit 生成 · 报告只含本地数据</footer>
 </main>
@@ -1044,6 +1115,7 @@ def render_html(
     kind: str = "auto",
     title: str = "",
     generated_at: str = "",
+    baseline: Mapping[str, Any] | None = None,
 ) -> str:
     """把一份报告数据渲染成完整 HTML。
 
@@ -1053,6 +1125,7 @@ def render_html(
             ``recipe`` / ``auto``。
         title: 覆盖默认标题。
         generated_at: 生成时间（默认不显示）。
+        baseline: 可选的基线报告；传入后在页面顶部加「与基线对比」区块。
     """
     if not isinstance(data, Mapping):
         data = {"raw": data}
@@ -1063,6 +1136,14 @@ def render_html(
     model = builder(data)
     if title:
         model["title"] = title
+    if baseline is not None:
+        diff = diff_reports(data, baseline, resolved)
+        model["diff"] = diff
+        model["stats"] = [
+            _stat("退化", diff["regressions"], "fail" if diff["regressions"] else "muted"),
+            _stat("改善", diff["improvements"], "ok" if diff["improvements"] else "muted"),
+            *(model.get("stats") or []),
+        ]
     return _render_page(model, generated_at=generated_at)
 
 
@@ -1073,12 +1154,19 @@ def write_html(
     kind: str = "auto",
     title: str = "",
     generated_at: str = "",
+    baseline: Mapping[str, Any] | None = None,
 ) -> Path:
     """渲染并写入文件，返回实际路径。"""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
-        render_html(data, kind=kind, title=title, generated_at=generated_at),
+        render_html(
+            data,
+            kind=kind,
+            title=title,
+            generated_at=generated_at,
+            baseline=baseline,
+        ),
         encoding="utf-8",
     )
     return target
