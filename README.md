@@ -51,6 +51,19 @@ GitHub 直连不稳定时可以用镜像 clone：
 git clone https://gh-proxy.com/https://github.com/Pear303/anti-crawl-kit.git
 ```
 
+## 60 秒演示（不联网）
+
+```bash
+ack-ui
+```
+
+打开 <http://127.0.0.1:8766>，左侧选「内置演示（不联网）」→ 点运行。
+配方只用 `set_var` / `log` / `assert`，不需要浏览器和网络。跑完会生成
+`runs/local_demo/latest.html`，左侧「历史报告」里也能回看。
+
+这是验证安装是否完整最快的方式：能看到实时日志、步骤状态和 HTML 报告，
+说明控制台、配方引擎、报告渲染三段链路都通了。
+
 ## 先跑几个例子
 
 ```bash
@@ -92,6 +105,8 @@ HTTP 侧走 curl_cffi，403/429 先分类再决定要不要开浏览器。签名
 结果不只在终端里看：`ack-report` 把审计、体检、冒烟、评估的 JSON 转成
 单文件 HTML（样式和脚本都内嵌，双击就能开）；`ack-ui` 起一个只监听本机
 的控制台，选配方、填参数、跑、看实时日志，agent 检查点也能在页面上继续。
+每次运行结束会落盘到 `runs/<recipe>/<时间戳>.json|html`，并更新 `latest.*`，
+关掉控制台后还能回看。
 
 立项阶段可以用 `ack-assess` 走 G0~G4，输出 Go/No-Go 和缺口清单。
 
@@ -138,9 +153,14 @@ ack-report --input benchmarks/baseline-r3/results.json   # 仓库里现成的示
 ack-report --dir runs
 ack-report --dir runs --out reports        # 输出到 reports/，保留子目录结构
 
+# 和基线对比：用例变差 / 指标下降 / 用例消失时退出码 1，适合每日监控或 CI
+ack-report --input runs/local_demo/latest.json \
+           --baseline runs/local_demo/20261113-090000.json
+
 # 本地 Web 控制台：选配方、填参数、跑、看日志（http://127.0.0.1:8766）
 ack-ui
 ack-ui --headed --channel msedge
+ack-ui --runs my-runs                      # 报告落盘目录（默认 runs）
 ```
 
 `ack-smoke`、`ack-assess`、`ack-mcp` 都支持 `--channel msedge` 走 Edge。
