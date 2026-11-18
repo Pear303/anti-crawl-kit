@@ -21,7 +21,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import queue
+import re
+import sys
 import threading
 import uuid
 import webbrowser
@@ -31,7 +34,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from .console import redact_mapping
 from .recipe import list_recipes, load_recipe, resume_recipe, run_recipe
@@ -43,6 +46,37 @@ _FIRST_RUN = object()
 
 def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+# Windows 不允许用这些名字做目录/文件
+_WINDOWS_RESERVED = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
+
+
+def _slug(value: str) -> str:
+    """把配方 id 变成安全的目录名，保留中文和常见符号。"""
+    cleaned = re.sub(r"[^0-9A-Za-z\u4e00-\u9fff._-]+", "_", value).strip("._-")
+    cleaned = cleaned[:60] or "recipe"
+    if cleaned.upper() in _WINDOWS_RESERVED:
+        cleaned = f"_{cleaned}"
+    return cleaned
+
+
+def _unique_stem(folder: Path) -> str:
+    """同一秒内多次运行也不覆盖：YYYYmmdd-HHMMSS[-n]。"""
+    base = datetime.now().strftime("%Y%m%d-%H%M%S")
+    stem = base
+    index = 1
+    while (folder / f"{stem}.json").exists() or (folder / f"{stem}.html").exists():
+        index += 1
+        stem = f"{base}-{index}"
+    return stem
 
 
 @dataclass
@@ -128,24 +162,92 @@ class UiService:
 
     # ── 报告 ──────────────────────────────────────────
     def runs(self) -> list[dict[str, Any]]:
+        """历史报告：每个目录只列最新一份，避免 latest 和时间戳重复。"""
         if not self.runs_dir.is_dir():
             return []
         files = [path for path in self.runs_dir.rglob("*.html") if path.is_file()]
-        files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+        groups: dict[Path, list[Path]] = {}
+        for path in files:
+            groups.setdefault(path.parent, []).append(path)
+
+        # 每个目录只留一份：有 latest.html 就优先用它，否则用最新的时间戳报告。
+        # 不能只按 mtime 排序：Windows 的 mtime 精度可能让 latest 和时间戳打平。
+        chosen: list[Path] = []
+        for parent, members in groups.items():
+            latest = parent / "latest.html"
+            if latest.is_file():
+                chosen.append(latest)
+            else:
+                chosen.append(max(members, key=lambda path: path.stat().st_mtime))
+        chosen.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+
         rows = []
-        for path in files[:60]:
+        for path in chosen[:60]:
+            parent = path.parent
             try:
                 rel = path.relative_to(self.runs_dir).as_posix()
             except ValueError:
                 continue
+            if parent == self.runs_dir:
+                name = path.stem
+                kind = "runs"
+                count = 0
+            else:
+                name = parent.name
+                kind = "recipe" if (parent / "latest.json").is_file() else name
+                count = len(groups[parent])
             rows.append(
                 {
-                    "name": path.stem,
-                    "kind": path.parent.name if path.parent != self.runs_dir else "runs",
-                    "url": f"/runs/{rel}",
+                    "name": name,
+                    "kind": kind,
+                    "url": "/runs/" + quote(rel, safe="/"),
+                    "count": count,
                 }
             )
         return rows
+
+    def _persist_job(self, job: UiJob) -> None:
+        """把终态作业写成 runs/<recipe>/<时间戳>.json|html 和 latest 副本。
+
+        落盘失败只告警，不能把已经跑完的作业改成失败。
+        """
+        if job.result is None or job.status not in ("done", "failed"):
+            return
+        try:
+            folder = self.runs_dir / _slug(job.recipe_id or job.recipe_path)
+            folder.mkdir(parents=True, exist_ok=True)
+            stem = _unique_stem(folder)
+
+            payload = dict(job.result)
+            payload["ui"] = {
+                "job_id": job.id,
+                "recipe_path": job.recipe_path,
+                "inputs": redact_mapping(job.inputs),
+                "with_browser": job.with_browser,
+                "persisted_at": _now(),
+            }
+            text = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
+            json_path = folder / f"{stem}.json"
+            html_path = folder / f"{stem}.html"
+            json_path.write_text(text, encoding="utf-8")
+            html_path.write_text(
+                render_html(payload, kind="recipe", title=f"配方 · {job.recipe_id}"),
+                encoding="utf-8",
+            )
+
+            # latest 先写临时文件再替换，避免页面读到写了一半的文件
+            for source, target in (
+                (json_path, folder / "latest.json"),
+                (html_path, folder / "latest.html"),
+            ):
+                temp = target.with_name(target.name + ".tmp")
+                temp.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+                os.replace(temp, target)
+        except Exception as exc:  # 落盘是附加能力，失败不影响作业结果
+            print(
+                f"[WARN] 报告落盘失败: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
 
     # ── 作业 ──────────────────────────────────────────
     def start(
@@ -192,6 +294,9 @@ class UiService:
             need_browser = job.with_browser or any(
                 step.uses.startswith("browser_") for step in recipe.steps
             )
+            # 纯逻辑配方不应该因为没装 [http] 就失败；只有 http_* 步骤才建客户端
+            need_http = any(step.uses.startswith("http_") for step in recipe.steps)
+            http_client = self._client() if need_http else None
             context = nullcontext(None)
             if need_browser:
                 from .session import BrowserSession
@@ -207,7 +312,7 @@ class UiService:
                         recipe,
                         inputs=job.inputs,
                         page=page,
-                        http_client=self._client(),
+                        http_client=http_client,
                         on_event=on_event,
                     )
                 else:
@@ -216,7 +321,7 @@ class UiService:
                         resume_value,
                         recipe=recipe,
                         page=page,
-                        http_client=self._client(),
+                        http_client=http_client,
                         on_event=on_event,
                     )
             job.result = redact_mapping(run.to_dict())
@@ -229,6 +334,7 @@ class UiService:
                 self._emit(job.id, {"type": "done", "status": "failed", "error": job.error})
         finally:
             job.finished_at = _now()
+            self._persist_job(job)
 
     def _client(self) -> Any:
         if self._http_client is None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
 import threading
 import time
 from http.server import ThreadingHTTPServer
@@ -123,6 +124,65 @@ def test_run_emits_events_and_report(service: UiService):
     html = service.report_html(job_id)
     assert "local_demo" in html
     assert "配方" in html
+
+
+def test_run_persists_latest_report(service: UiService):
+    job_id = service.start("local_demo", {"name": "world"})
+    snapshot = _wait(service, job_id)
+    assert snapshot["status"] == "done", snapshot
+
+    folder = service.runs_dir / "local_demo"
+    latest_json = folder / "latest.json"
+    latest_html = folder / "latest.html"
+    assert latest_json.is_file()
+    assert latest_html.is_file()
+
+    payload = json.loads(latest_json.read_text(encoding="utf-8"))
+    assert payload["recipe_id"] == "local_demo"
+    assert payload["status"] == "done"
+    assert payload["ui"]["job_id"] == job_id
+    assert "local_demo" in latest_html.read_text(encoding="utf-8")
+
+    rows = service.runs()
+    row = next(item for item in rows if item["name"] == "local_demo")
+    assert row["kind"] == "recipe"
+    assert row["url"].endswith("/latest.html")
+    # 时间戳报告 + latest 副本
+    assert row["count"] >= 2
+
+
+def test_runs_prefers_latest_even_if_mtime_is_older(service: UiService):
+    """Windows 的 mtime 精度可能让 latest 和时间戳打平，必须显式优先 latest。"""
+    job_id = service.start("local_demo", {"name": "world"})
+    assert _wait(service, job_id)["status"] == "done"
+    latest = service.runs_dir / "local_demo" / "latest.html"
+    old = time.time() - 3600
+    os.utime(latest, (old, old))
+
+    row = next(item for item in service.runs() if item["name"] == "local_demo")
+    assert row["url"].endswith("/latest.html")
+
+
+def test_pure_logic_recipe_does_not_require_http_extra(service: UiService, monkeypatch):
+    """内置 demo 不能因为没装 [http] 就失败。"""
+
+    def unavailable():
+        raise ModuleNotFoundError("No module named 'curl_cffi'")
+
+    monkeypatch.setattr(service, "_client", unavailable)
+    job_id = service.start("local_demo", {"name": "world"})
+    assert _wait(service, job_id)["status"] == "done"
+
+
+def test_needs_agent_not_persisted_until_resume(service: UiService):
+    job_id = service.start("agent_demo.yaml", {})
+    assert _wait(service, job_id)["status"] == "needs_agent"
+    # 中间态不落盘，避免 latest 指向未完成的报告
+    assert not (service.runs_dir / "agent_demo").exists()
+
+    service.resume(job_id, "ok")
+    assert _wait(service, job_id)["status"] == "done"
+    assert (service.runs_dir / "agent_demo" / "latest.json").is_file()
 
 
 def test_agent_checkpoint_and_resume(service: UiService):
