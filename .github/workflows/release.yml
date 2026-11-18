@@ -72,6 +72,10 @@ jobs:
   publish-pypi:
     name: publish to PyPI
     needs: build
+    # PyPI 暂未配置 trusted publisher：默认跳过，避免 tag 发布整体标红。
+    # 配好后在仓库 Settings → Secrets and variables → Actions → Variables
+    # 里加 PUBLISH_PYPI=true 即可启用。
+    if: vars.PUBLISH_PYPI == 'true'
     runs-on: ubuntu-latest
     environment:
       name: pypi
