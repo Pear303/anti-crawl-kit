@@ -446,6 +446,7 @@ def test_list_recipes(tmp_path: Path) -> None:
 
 
 def test_bundled_local_demo_runs_without_browser_or_network() -> None:
+    pytest.importorskip("yaml", reason="内置 demo 是 YAML，需要 [config] extra")
     root = Path(__file__).resolve().parents[1]
     recipe = load_recipe(root / "examples" / "recipes" / "local_demo.yaml")
     assert recipe.id == "local_demo"
