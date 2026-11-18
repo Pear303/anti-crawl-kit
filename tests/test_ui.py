@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from anti_crawl_kit.ui import UiService, make_handler
+from anti_crawl_kit.ui import UiService, _default_recipes, make_handler
 
 pytest.importorskip("yaml", reason="配方测试需要 [config] extra")
 
@@ -149,6 +149,31 @@ def test_run_persists_latest_report(service: UiService):
     assert row["url"].endswith("/latest.html")
     # 时间戳报告 + latest 副本
     assert row["count"] >= 2
+
+
+def test_snapshot_done_means_report_already_persisted(service: UiService, monkeypatch):
+    """status 变成 done 时报告必须已经落盘，前端刷新不会看到空的历史列表。"""
+    import anti_crawl_kit.ui as ui_module
+
+    real_render = ui_module.render_html
+
+    def slow_render(*args, **kwargs):
+        time.sleep(0.15)
+        return real_render(*args, **kwargs)
+
+    monkeypatch.setattr(ui_module, "render_html", slow_render)
+    job_id = service.start("local_demo", {"name": "world"})
+    snapshot = _wait(service, job_id)
+    assert snapshot["status"] == "done"
+    assert (service.runs_dir / "local_demo" / "latest.html").is_file()
+
+
+def test_default_recipes_falls_back_to_bundled(tmp_path: Path, monkeypatch):
+    """pip 安装后没有 examples/，默认必须回退到包内 recipes。"""
+    monkeypatch.chdir(tmp_path)
+    resolved = Path(_default_recipes())
+    assert resolved.is_dir()
+    assert (resolved / "local_demo.yaml").is_file()
 
 
 def test_runs_prefers_latest_even_if_mtime_is_older(service: UiService):

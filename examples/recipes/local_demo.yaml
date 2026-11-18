@@ -1,0 +1,32 @@
+id: local_demo
+title: 内置演示（不联网）
+description: 60 秒看到「运行 → 日志 → 报告」；纯逻辑，不需要浏览器和网络
+version: "1"
+
+inputs:
+  name:
+    type: string
+    required: true
+    default: world
+
+steps:
+  - id: greet
+    uses: set_var
+    with:
+      name: greeting
+      value: "hello ${inputs.name}"
+
+  - id: note
+    uses: log
+    with:
+      message: "演示配方已执行，问候语：${steps.greet.value}"
+
+  - id: check
+    uses: assert
+    with:
+      value: "${steps.greet.value}"
+      op: contains
+      expected: "hello"
+
+outputs:
+  greeting: "${steps.greet.value}"

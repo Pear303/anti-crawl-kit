@@ -443,3 +443,12 @@ def test_list_recipes(tmp_path: Path) -> None:
     assert len(rows) == 2
     assert any(row["valid"] is False for row in rows)
     assert any(row["id"] == "ok" for row in rows)
+
+
+def test_bundled_local_demo_runs_without_browser_or_network() -> None:
+    root = Path(__file__).resolve().parents[1]
+    recipe = load_recipe(root / "examples" / "recipes" / "local_demo.yaml")
+    assert recipe.id == "local_demo"
+    run = run_recipe(recipe, inputs={"name": "world"})
+    assert run.status == "done", run.error
+    assert run.context["vars"]["greeting"] == "hello world"

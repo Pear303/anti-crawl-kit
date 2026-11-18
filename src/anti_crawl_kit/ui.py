@@ -206,12 +206,14 @@ class UiService:
             )
         return rows
 
-    def _persist_job(self, job: UiJob) -> None:
+    def _persist_job(self, job: UiJob, status: str) -> None:
         """把终态作业写成 runs/<recipe>/<时间戳>.json|html 和 latest 副本。
 
         落盘失败只告警，不能把已经跑完的作业改成失败。
+        ``status`` 由调用方传入，这样作业的终态可以在落盘完成后才对
+        ``snapshot`` 可见，避免页面看到 done 却找不到报告。
         """
-        if job.result is None or job.status not in ("done", "failed"):
+        if job.result is None or status not in ("done", "failed"):
             return
         try:
             folder = self.runs_dir / _slug(job.recipe_id or job.recipe_path)
@@ -289,6 +291,7 @@ class UiService:
                 done_sent["value"] = True
             self._emit(job.id, event)
 
+        final_status = "failed"
         try:
             recipe = load_recipe(self._resolve_recipe(job.recipe_path))
             need_browser = job.with_browser or any(
@@ -325,16 +328,18 @@ class UiService:
                         on_event=on_event,
                     )
             job.result = redact_mapping(run.to_dict())
-            job.status = run.status
+            final_status = run.status
             job.error = run.error
         except Exception as exc:  # 作业失败不拖垮控制台
-            job.status = "failed"
+            final_status = "failed"
             job.error = f"{type(exc).__name__}: {exc}"
             if not done_sent["value"]:
                 self._emit(job.id, {"type": "done", "status": "failed", "error": job.error})
         finally:
             job.finished_at = _now()
-            self._persist_job(job)
+            # 先落盘再公开终态：前端看到 done 时 latest.* 一定已经写好
+            self._persist_job(job, final_status)
+            job.status = final_status
 
     def _client(self) -> Any:
         if self._http_client is None:
@@ -599,9 +604,18 @@ def serve(service: UiService, host: str = "127.0.0.1", port: int = 8766) -> None
 
 
 def _default_recipes() -> str:
+    """默认配方目录。
+
+    优先仓库里的 ``examples/recipes``，其次是当前目录的 ``recipes``；
+    pip 安装后没有 examples，退回随包发布的 ``anti_crawl_kit/recipes``，
+    这样内置 demo 开箱就能看到。
+    """
     for name in ("examples/recipes", "recipes"):
         if Path(name).is_dir():
             return name
+    bundled = Path(__file__).resolve().parent / "recipes"
+    if bundled.is_dir():
+        return str(bundled)
     return "recipes"
 
 
@@ -612,7 +626,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--host", default="127.0.0.1", help="监听地址（默认只监听本机）")
     parser.add_argument("--port", type=int, default=8766, help="端口（默认 8766）")
-    parser.add_argument("--recipes", default="", help="配方目录（默认 examples/recipes）")
+    parser.add_argument(
+        "--recipes",
+        default="",
+        help="配方目录（默认 examples/recipes；装成包后回退到内置 recipes）",
+    )
     parser.add_argument("--runs", default="runs", help="报告目录（默认 runs）")
     parser.add_argument("--headed", action="store_true", help="浏览器有头运行")
     parser.add_argument(

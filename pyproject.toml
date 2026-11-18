@@ -51,7 +51,8 @@ version = { attr = "anti_crawl_kit.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-anti_crawl_kit = ["py.typed"]
+# recipes/*.yaml 是 pip 安装后 ack-ui 默认能列出的内置配方
+anti_crawl_kit = ["py.typed", "recipes/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
