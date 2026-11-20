@@ -1,0 +1,107 @@
+# 每日跑一次配方，和上一次对比；有退化就开 Issue。
+#
+# 用法：复制到 .github/workflows/daily-recipe.yml，改 RECIPE 和 cron。
+# 前置：仓库 Settings → Actions → General 允许 workflow 读写（Issues 需要 write）。
+#
+# 为什么需要 cache：GitHub 每次都是全新 runner，--baseline auto 找不到
+# 上一次报告。这里把 runs/ 缓存下来，下次先恢复再跑，才有「上一次」可比。
+#
+# 注意：本模板只装 [config]，适合纯逻辑 / HTTP 配方。需要浏览器的配方
+# 还要装 patchright 和浏览器（成本高、时间长），建议单独一个 workflow。
+name: daily-recipe
+
+on:
+  schedule:
+    - cron: "0 1 * * *" # UTC 01:00 = 北京时间 09:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  # 改成你的配方路径。仓库里自带的 local_demo.yaml 可以先用来自测模板。
+  RECIPE: recipes/daily.yaml
+  RUNS: runs
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装
+        run: pip install "anti-crawl-kit[config]"
+
+      - name: 恢复历史报告
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.RUNS }}
+          key: ${{ env.RUNS }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ env.RUNS }}-
+
+      # 退出码：0=正常（可能没有历史基线），1=配方失败或退化，2=参数/落盘错误。
+      # 这里不直接 fail，后面按退出码决定是否开 Issue。
+      - name: 跑配方并对比上一次
+        id: recipe
+        run: |
+          set +e
+          ack-recipe "$RECIPE" --runs "$RUNS" --baseline auto 2>&1 | tee output.txt
+          code=${PIPESTATUS[0]}
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -ne 0 ]; then
+            echo "::error::ack-recipe 退出码 $code"
+          fi
+          exit 0
+
+      - name: 生成 HTML 报告与索引
+        if: always()
+        run: ack-report --dir "$RUNS" --baseline auto || true
+
+      - name: 上传报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runs-${{ github.run_number }}
+          path: ${{ env.RUNS }}
+          retention-days: 30
+
+      - name: 保存历史报告
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.RUNS }}
+          key: ${{ env.RUNS }}-${{ github.run_id }}
+
+      # 只在退化 / 失败时开 Issue，避免每次运行都告警。
+      # 已经有一个未关闭的退化 Issue 时不重复开，把详情贴在评论里。
+      - name: 有退化时开 Issue
+        if: steps.recipe.outputs.code != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="每日巡检退化：${RECIPE}"
+          body=$(mktemp)
+          {
+            echo "## 退化详情"
+            echo
+            echo '```'
+            tail -n 60 output.txt
+            echo '```'
+            echo
+            echo "报告见本次 run 的 artifact：runs-${{ github.run_number }}"
+          } > "$body"
+
+          existing=$(gh issue list --state open --search "$title in:title" \
+            --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file "$body"
+            echo "已追加到 Issue #$existing"
+          else
+            gh issue create --title "$title" --body-file "$body"
+          fi

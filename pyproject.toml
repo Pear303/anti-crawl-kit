@@ -42,6 +42,7 @@ ack-smoke = "anti_crawl_kit.tools.smoke_cli:main"
 ack-mcp = "anti_crawl_kit.mcp_server:main"
 ack-assess = "anti_crawl_kit.tools.assess_cli:main"
 ack-report = "anti_crawl_kit.tools.report_cli:main"
+ack-recipe = "anti_crawl_kit.tools.recipe_cli:main"
 ack-ui = "anti_crawl_kit.ui:main"
 
 [tool.setuptools.dynamic]

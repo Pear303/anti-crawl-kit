@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import time
 from pathlib import Path
 
 from anti_crawl_kit.report import (
@@ -398,7 +400,107 @@ def test_cli_baseline_rejects_directory_mode(tmp_path: Path, capsys):
         ["--dir", str(tmp_path), "--baseline", str(baseline_path)]
     )
     assert code == 2
-    assert "只支持 --input" in capsys.readouterr().err
+    assert "只支持 auto" in capsys.readouterr().err
+
+
+def _write_timed(path: Path, data: dict, mtime: float) -> Path:
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    os.utime(path, (mtime, mtime))
+    return path
+
+
+def _health_all_ok() -> dict:
+    data = _health_data()
+    data["results"] = [
+        {"dimension": "registry", "platform": "a", "status": "OK", "detail": "ok"},
+        {"dimension": "registry", "platform": "b", "status": "OK", "detail": "ok"},
+    ]
+    data["summary"] = {"OK": 2, "WARN": 0, "FAIL": 0, "SKIP": 0}
+    return data
+
+
+def test_cli_baseline_auto_picks_previous(tmp_path: Path, capsys):
+    now = time.time()
+    _write_timed(tmp_path / "20261113-090000.json", _health_all_ok(), now - 3600)
+    current = _write_timed(tmp_path / "20261114-090000.json", _health_data(), now)
+
+    code = report_main(["--input", str(current), "--baseline", "auto"])
+    assert code == 1
+    out = capsys.readouterr().out
+    assert "基线:" in out
+    assert "退化 1" in out
+    assert "OK -> FAIL" in out
+
+
+def test_cli_baseline_auto_skips_latest(tmp_path: Path, capsys):
+    """latest.json 是副本，不能拿来和当前报告比。"""
+    now = time.time()
+    _write_timed(tmp_path / "20261113-090000.json", _health_data(), now - 3600)
+    current = _write_timed(tmp_path / "20261114-090000.json", _health_all_ok(), now - 60)
+    _write_timed(tmp_path / "latest.json", _health_all_ok(), now)
+
+    code = report_main(["--input", str(current), "--baseline", "auto"])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "改善 1" in out
+
+
+def test_cli_baseline_auto_without_history(tmp_path: Path, capsys):
+    current = _write_timed(tmp_path / "20261114-090000.json", _health_data(), time.time())
+    code = report_main(["--input", str(current), "--baseline", "auto"])
+    assert code == 0
+    assert "没有找到上次的同类型报告" in capsys.readouterr().err
+
+
+def _recipe_with_status(status: str) -> dict:
+    return {
+        "run_id": "abc",
+        "recipe_id": "demo",
+        "status": "done" if status == "ok" else "failed",
+        "steps": [{"id": "fetch", "uses": "http_get", "status": status, "elapsed_ms": 10}],
+    }
+
+
+def test_cli_dir_baseline_auto_summarizes(tmp_path: Path, capsys):
+    folder = tmp_path / "runs" / "demo"
+    folder.mkdir(parents=True)
+    now = time.time()
+    _write_timed(folder / "20261113-090000.json", _recipe_with_status("ok"), now - 3600)
+    _write_timed(folder / "20261114-090000.json", _recipe_with_status("failed"), now)
+
+    code = report_main(["--dir", str(tmp_path / "runs"), "--baseline", "auto"])
+    assert code == 1
+    out = capsys.readouterr().out
+    assert "demo/20261114-090000.json: 退化 1" in out
+    assert "合计退化 1" in out
+    assert (folder / "20261114-090000.html").is_file()
+    assert (tmp_path / "runs" / "index.html").is_file()
+
+
+def test_cli_dir_skips_latest_copy(tmp_path: Path, capsys):
+    """latest.json 是副本，不参与索引，否则会重复且干扰基线选择。"""
+    folder = tmp_path / "runs" / "demo"
+    folder.mkdir(parents=True)
+    now = time.time()
+    _write_timed(folder / "20261113-090000.json", _recipe_with_status("ok"), now - 3600)
+    _write_timed(folder / "latest.json", _recipe_with_status("ok"), now)
+
+    code = report_main(["--dir", str(tmp_path / "runs")])
+    assert code == 0
+    assert not (folder / "latest.html").is_file()
+    index = (tmp_path / "runs" / "index.html").read_text(encoding="utf-8")
+    assert "20261113-090000" in index
+    assert "latest" not in index
+
+
+def test_cli_dir_with_only_latest_returns_2(tmp_path: Path, capsys):
+    folder = tmp_path / "runs" / "demo"
+    folder.mkdir(parents=True)
+    _write_timed(folder / "latest.json", _recipe_with_status("ok"), time.time())
+
+    code = report_main(["--dir", str(tmp_path / "runs")])
+    assert code == 2
+    assert "目录里没有 JSON 报告" in capsys.readouterr().err
 
 
 def test_cli_rejects_missing_file(tmp_path: Path):

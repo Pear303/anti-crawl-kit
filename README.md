@@ -106,7 +106,8 @@ HTTP 侧走 curl_cffi，403/429 先分类再决定要不要开浏览器。签名
 单文件 HTML（样式和脚本都内嵌，双击就能开）；`ack-ui` 起一个只监听本机
 的控制台，选配方、填参数、跑、看实时日志，agent 检查点也能在页面上继续。
 每次运行结束会落盘到 `runs/<recipe>/<时间戳>.json|html`，并更新 `latest.*`，
-关掉控制台后还能回看。
+关掉控制台后还能回看。同一条配方也能用 `ack-recipe` 在命令行跑，
+`--baseline auto` 自动和上一次对比，有退化退出码 1，适合 cron 和 CI。
 
 立项阶段可以用 `ack-assess` 走 G0~G4，输出 Go/No-Go 和缺口清单。
 
@@ -156,6 +157,12 @@ ack-report --dir runs --out reports        # 输出到 reports/，保留子目�
 # 和基线对比：用例变差 / 指标下降 / 用例消失时退出码 1，适合每日监控或 CI
 ack-report --input runs/local_demo/latest.json \
            --baseline runs/local_demo/20261113-090000.json
+ack-report --input runs/local_demo/latest.json --baseline auto   # 自动找同目录上一次
+ack-report --dir runs --baseline auto                            # 每份各自对比，汇总退化
+
+# 命令行跑配方：落盘到 runs/<recipe>/，并可对比上一次
+ack-recipe examples/recipes/local_demo.yaml
+ack-recipe recipes/daily.yaml --inputs url=https://example.com --baseline auto
 
 # 本地 Web 控制台：选配方、填参数、跑、看日志（http://127.0.0.1:8766）
 ack-ui
@@ -206,6 +213,7 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 - 稳定性：03 防风控、05 排障、06 踩坑、24 健康体检、25 冒烟
 - Agent：12 任务模板、15 工作流、17 发现与固化、26 MCP 接入、27 技术验证
 - 可视化：29 报告与控制台
+- 监控：31 每日监控与退化告警
 - 发布：30 发版与 PyPI
 - 案例：21 站点形态实测、28 掘金真实采集
 

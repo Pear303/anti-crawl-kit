@@ -98,6 +98,7 @@ def test_cli_entry_points_declared() -> None:
         "ack-mcp",
         "ack-assess",
         "ack-report",
+        "ack-recipe",
         "ack-ui",
     }
     for target in scripts.values():

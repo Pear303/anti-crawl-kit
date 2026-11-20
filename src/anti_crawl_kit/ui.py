@@ -21,9 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import queue
-import re
 import sys
 import threading
 import uuid
@@ -39,6 +37,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from .console import redact_mapping
 from .recipe import list_recipes, load_recipe, resume_recipe, run_recipe
 from .report import render_html
+from .runs import persist_run
 from .ui_assets import INDEX_HTML
 
 _FIRST_RUN = object()
@@ -46,37 +45,6 @@ _FIRST_RUN = object()
 
 def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-# Windows 不允许用这些名字做目录/文件
-_WINDOWS_RESERVED = {
-    "CON",
-    "PRN",
-    "AUX",
-    "NUL",
-    *(f"COM{i}" for i in range(1, 10)),
-    *(f"LPT{i}" for i in range(1, 10)),
-}
-
-
-def _slug(value: str) -> str:
-    """把配方 id 变成安全的目录名，保留中文和常见符号。"""
-    cleaned = re.sub(r"[^0-9A-Za-z\u4e00-\u9fff._-]+", "_", value).strip("._-")
-    cleaned = cleaned[:60] or "recipe"
-    if cleaned.upper() in _WINDOWS_RESERVED:
-        cleaned = f"_{cleaned}"
-    return cleaned
-
-
-def _unique_stem(folder: Path) -> str:
-    """同一秒内多次运行也不覆盖：YYYYmmdd-HHMMSS[-n]。"""
-    base = datetime.now().strftime("%Y%m%d-%H%M%S")
-    stem = base
-    index = 1
-    while (folder / f"{stem}.json").exists() or (folder / f"{stem}.html").exists():
-        index += 1
-        stem = f"{base}-{index}"
-    return stem
 
 
 @dataclass
@@ -216,35 +184,20 @@ class UiService:
         if job.result is None or status not in ("done", "failed"):
             return
         try:
-            folder = self.runs_dir / _slug(job.recipe_id or job.recipe_path)
-            folder.mkdir(parents=True, exist_ok=True)
-            stem = _unique_stem(folder)
-
-            payload = dict(job.result)
-            payload["ui"] = {
-                "job_id": job.id,
-                "recipe_path": job.recipe_path,
-                "inputs": redact_mapping(job.inputs),
-                "with_browser": job.with_browser,
-                "persisted_at": _now(),
-            }
-            text = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
-            json_path = folder / f"{stem}.json"
-            html_path = folder / f"{stem}.html"
-            json_path.write_text(text, encoding="utf-8")
-            html_path.write_text(
-                render_html(payload, kind="recipe", title=f"配方 · {job.recipe_id}"),
-                encoding="utf-8",
+            persist_run(
+                job.result,
+                self.runs_dir,
+                job.recipe_id or job.recipe_path,
+                extra={
+                    "ui": {
+                        "job_id": job.id,
+                        "recipe_path": job.recipe_path,
+                        "inputs": redact_mapping(job.inputs),
+                        "with_browser": job.with_browser,
+                        "persisted_at": _now(),
+                    }
+                },
             )
-
-            # latest 先写临时文件再替换，避免页面读到写了一半的文件
-            for source, target in (
-                (json_path, folder / "latest.json"),
-                (html_path, folder / "latest.html"),
-            ):
-                temp = target.with_name(target.name + ".tmp")
-                temp.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-                os.replace(temp, target)
         except Exception as exc:  # 落盘是附加能力，失败不影响作业结果
             print(
                 f"[WARN] 报告落盘失败: {type(exc).__name__}: {exc}",
