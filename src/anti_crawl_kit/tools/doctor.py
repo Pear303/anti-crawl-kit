@@ -180,7 +180,7 @@ def _check_browsers() -> list[Check]:
                 "WARN",
                 "Chrome 与 patchright 版本差得较多",
                 f"系统 {actual}，patchright 期望 {expected}（差 {gap} 个大版本）",
-                "浏览器步骤异常时再处理：升级 patchright，或改用 Edge（--channel msedge）",
+                "ack-probe / ack-dom / ack-detect 会直接拒绝启动；ack-recipe / ack-ui 不受影响。把 Chrome 与 patchright 期望的大版本对齐（升/降任一侧）",
             )
         )
     else:
