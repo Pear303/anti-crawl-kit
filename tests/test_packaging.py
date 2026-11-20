@@ -87,6 +87,9 @@ def test_cli_entry_points_declared() -> None:
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     scripts = data["project"]["scripts"]
     assert set(scripts) == {
+        "ack",
+        "ack-doctor",
+        "ack-init",
         "ack-probe",
         "ack-hunt",
         "ack-dom",

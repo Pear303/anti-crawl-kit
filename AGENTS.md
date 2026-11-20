@@ -117,13 +117,19 @@ src/anti_crawl_kit/
 └─ resources.py     资源拦截
 
 tools/
+├─ ack_cli.py        统一入口（ack doctor / ack init / ack recipe ...）
+├─ doctor.py         环境自检（依赖 / 浏览器 / 端口 / 目录 / 代理）
+├─ init_cli.py       生成配方骨架与体检模板
+├─ recipe_cli.py     命令行跑配方 + --baseline auto
+├─ report_cli.py     JSON 报告转 HTML + 索引
 ├─ dom_probe.py      新平台接入探测
 ├─ js_api_hunt.py    从 JS 包找接口
 ├─ bench.py          curl_cffi vs patchright 最小评测
 └─ detector_check.py 反检测自检
 
 docs/                方法论 + SOP + 红线 + 任务模板
-examples/            15 个可运行示例
+docs/assets/         演示 GIF
+examples/            16 个可运行示例 + fixtures/ 离线页面
 benchmarks/          评测输出（report.md + results.json）
 tests/               无浏览器冒烟测试
 ```
@@ -183,6 +189,10 @@ tests/               无浏览器冒烟测试
 | 让 agent 直连 / recipe 检查点 / MCP | `docs/26-Agent接入与MCP.md` |
 | 立项前评估能不能做 / Go-No-Go | `docs/27-技术验证路线.md` |
 | 真实平台验证案例（掘金） | `docs/28-掘金真实采集记录.md` |
+| 报告与控制台 / 历史对比 | `docs/29-可视化报告与本地控制台.md` |
+| 发版与 PyPI | `docs/30-发布流程.md` |
+| 每日监控与退化告警 | `docs/31-每日监控与退化告警.md` |
+| 第一次装完怎么走通 | `docs/32-三分钟上手.md` |
 
 ---
 
@@ -246,7 +256,10 @@ agent 手写能解决就手写，但不要裸 `requests`。
   - 按需：`pip install -e ".[browser]"` / `".[http]"` / `".[config]"` / `".[mcp]"`
 - `requirements.txt` 由 `scripts/gen_requirements.py` 生成，勿手改
 - 临时文件用 `C:\Windows\Temp\opencode`
-- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke` / `ack-mcp` / `ack-assess` / `ack-report` / `ack-recipe` / `ack-ui`
+- 安装后 CLI：`ack`（统一入口）/ `ack-doctor` / `ack-init` / `ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke` / `ack-mcp` / `ack-assess` / `ack-report` / `ack-recipe` / `ack-ui`
+- 上手路径：`ack doctor` 自检（WARN 不阻塞，只有 FAIL 退出码 1）→ `ack init recipe` 生成能直接跑的骨架 → `ack-recipe my_recipe.yaml`。`ack <子命令>` 与 `ack-<子命令>` 完全等价。
+- 完全离线验证：`python examples/16_local_fixture.py`（读 `examples/fixtures/*.html`，不联网、不启浏览器）；`docs/assets/demo.gif` 是 `ack-ui` 的真实录屏。
+- 英文文档：`README_EN.md`，与 `README.md` 顶部互相链接。
 - 发布：改 `src/anti_crawl_kit/__init__.py` 的 `__version__`，打 `v*` tag 并推送；`release.yml` 自动构建、发 PyPI、建 GitHub Release。详见 `docs/30-发布流程.md`。
 - `ack-ui` 每次运行落盘到 `runs/<recipe>/<时间戳>.json|html` + `latest.*`；`ack-recipe` 用同一套命名在命令行跑配方，两者共用 `runs.py`。
 - 结果对比：`ack-report --baseline auto` / `ack-recipe --baseline auto` 在同目录找上一次同类型报告（跳过 `latest.*`，只找更旧的）；有退化退出码 1。每日监控模板见 `examples/ci/daily-recipe.yml`，说明见 `docs/31-每日监控与退化告警.md`。

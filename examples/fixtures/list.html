@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture · 列表页（SSR）</title>
+  <style>
+    :root { --line: #e5e7eb; --muted: #6b7280; }
+    body { margin: 0; font: 14px/1.6 -apple-system, "Segoe UI", sans-serif; }
+    .container { max-width: 720px; margin: 0 auto; padding: 24px 20px; }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    .intro { color: var(--muted); margin: 0 0 18px; }
+    .list { display: grid; gap: 12px; }
+    .card { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+    .card h2 { font-size: 15px; margin: 0 0 6px; }
+    .card h2 a { color: inherit; text-decoration: none; }
+    .excerpt { margin: 0 0 8px; color: var(--muted); }
+    .price { margin: 0; }
+    .tags { list-style: none; display: flex; gap: 6px; padding: 0; margin: 8px 0 0; }
+    .tag { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+    .pagination { display: flex; gap: 8px; align-items: center; margin-top: 20px; }
+    .pagination a { padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; text-decoration: none; color: inherit; }
+    .pagination a.active { font-weight: 600; }
+    footer { margin-top: 24px; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+<main class="container">
+  <h1>公开书目</h1>
+  <p class="intro">
+    这是一个完全离线的 fixture，用来演示「先判页面形态，再写选择器」。
+    它没有接口、没有 JavaScript，数据全部在 HTML 里，属于最理想的服务端渲染页面。
+    先看数据在不在 HTML 里，再决定要不要开浏览器；形态判断错了，后面写多少选择器都是白费。
+  </p>
+  <section class="list">
+    <article class="card" data-id="1">
+      <h2 class="title"><a href="/item/1">第一本书</a></h2>
+      <p class="excerpt">从最基础的环境搭建讲起，重点是让第一次运行就能看到结果，而不是卡在依赖和路径上。</p>
+      <p class="price">¥ 39.00</p>
+      <ul class="tags"><li class="tag">Python</li><li class="tag">入门</li></ul>
+    </article>
+    <article class="card" data-id="2">
+      <h2 class="title"><a href="/item/2">第二本书</a></h2>
+      <p class="excerpt">讲请求层怎么选：什么时候用普通 HTTP，什么时候必须开浏览器，以及两者的成本和边界。</p>
+      <p class="price">¥ 45.00</p>
+      <ul class="tags"><li class="tag">爬虫</li></ul>
+    </article>
+    <article class="card" data-id="3">
+      <h2 class="title"><a href="/item/3">第三本书</a></h2>
+      <p class="excerpt">围绕页面结构做分析，判断数据在 HTML、全局状态还是 XHR 响应里，避免一上来就写选择器。</p>
+      <p class="price">¥ 52.00</p>
+      <ul class="tags"><li class="tag">工程</li><li class="tag">实践</li></ul>
+    </article>
+    <article class="card" data-id="4">
+      <h2 class="title"><a href="/item/4">第四本书</a></h2>
+      <p class="excerpt">测试与回归：用固定的 fixture 保证选择器改动可验证，不依赖真实站点和网络波动。</p>
+      <p class="price">¥ 28.00</p>
+      <ul class="tags"><li class="tag">测试</li></ul>
+    </article>
+    <article class="card" data-id="5">
+      <h2 class="title"><a href="/item/5">第五本书</a></h2>
+      <p class="excerpt">浏览器自动化实战：登录态复用、窗口关闭感知、验证墙止损，以及什么时候应该停下来。</p>
+      <p class="price">¥ 61.00</p>
+      <ul class="tags"><li class="tag">浏览器</li><li class="tag">自动化</li></ul>
+    </article>
+    <article class="card" data-id="6">
+      <h2 class="title"><a href="/item/6">第六本书</a></h2>
+      <p class="excerpt">HTTP 细节：TLS 指纹、请求头顺序、限频和重试，解释为什么同样的 URL 换个客户端就 403。</p>
+      <p class="price">¥ 33.00</p>
+      <ul class="tags"><li class="tag">HTTP</li></ul>
+    </article>
+    <article class="card" data-id="7">
+      <h2 class="title"><a href="/item/7">第七本书</a></h2>
+      <p class="excerpt">数据质量：字段空值率、重复率、长度分布，先证明拿到的是有效数据，再谈规模和速度。</p>
+      <p class="price">¥ 47.00</p>
+      <ul class="tags"><li class="tag">数据</li><li class="tag">质量</li></ul>
+    </article>
+    <article class="card" data-id="8">
+      <h2 class="title"><a href="/item/8">第八本书</a></h2>
+      <p class="excerpt">配方编排：把确定性步骤固化成 YAML，只在真正需要判断的地方留给 agent。</p>
+      <p class="price">¥ 55.00</p>
+      <ul class="tags"><li class="tag">recipe</li></ul>
+    </article>
+    <article class="card" data-id="9">
+      <h2 class="title"><a href="/item/9">第九本书</a></h2>
+      <p class="excerpt">监控与退化：每次运行落盘，和上一次对比，只看变差的部分，避免每天被同样的告警淹没。</p>
+      <p class="price">¥ 42.00</p>
+      <ul class="tags"><li class="tag">监控</li><li class="tag">回归</li></ul>
+    </article>
+    <article class="card" data-id="10">
+      <h2 class="title"><a href="/item/10">第十本书</a></h2>
+      <p class="excerpt">边界与合规：只采公开数据，尊重频率限制，遇到验证墙就停，不把工具用成对抗工具。</p>
+      <p class="price">¥ 36.00</p>
+      <ul class="tags"><li class="tag">合规</li></ul>
+    </article>
+  </section>
+  <nav class="pagination">
+    <a class="prev" href="?page=0" rel="prev">上一页</a>
+    <a href="?page=1" class="active">1</a>
+    <a href="?page=2">2</a>
+    <a href="?page=3">3</a>
+    <a class="next" href="?page=2" rel="next">下一页</a>
+  </nav>
+  <footer>fixture 数据，仅用于本地演示；没有真实站点请求。</footer>
+</main>
+</body>
+</html>

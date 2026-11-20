@@ -31,6 +31,10 @@ dev = [
 ]
 
 [project.scripts]
+# 统一入口：ack doctor / ack init recipe / ack recipe ...
+ack = "anti_crawl_kit.tools.ack_cli:main"
+ack-doctor = "anti_crawl_kit.tools.doctor:main"
+ack-init = "anti_crawl_kit.tools.init_cli:main"
 ack-probe = "anti_crawl_kit.tools.agent_probe:main"
 ack-hunt = "anti_crawl_kit.tools.js_api_hunt:main"
 ack-dom = "anti_crawl_kit.tools.dom_probe:main"

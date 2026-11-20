@@ -1,5 +1,7 @@
 # anti-crawl-kit
 
+中文 · [English](README_EN.md)
+
 浏览器自动化和反爬方向的工具包。接新平台时可以直接从这里起步，少踩一遍
 登录态、验证码、改版、静默空结果的坑。
 
@@ -51,7 +53,33 @@ GitHub 直连不稳定时可以用镜像 clone：
 git clone https://gh-proxy.com/https://github.com/Pear303/anti-crawl-kit.git
 ```
 
+## 先自检
+
+装完先跑一条命令，比照着 README 逐条排查省事：
+
+```bash
+ack doctor
+```
+
+它会检查 Python 版本、可选依赖、Chrome / Edge、默认端口、`runs` 目录和代理变量，
+每个问题都附一条能直接粘的命令：
+
+```text
+[OK]    Python 3.13.3 (>= 3.10)
+[OK]    anti-crawl-kit 0.13.0
+[WARN]  patchright 未安装
+        browser_* 步骤不可用
+        → pip install "anti-crawl-kit[browser]"
+[OK]    Chrome 158.0.8127.36
+[OK]    端口 8766 空闲（ack-ui 默认端口）
+```
+
+只有阻塞问题（Python 太旧、核心包导入失败、目录不可写）才返回退出码 1。
+缺可选依赖只是 WARN，纯逻辑和测试照常能跑。加 `--json` 可以给 CI 用。
+
 ## 60 秒演示（不联网）
+
+![ack-ui 演示](docs/assets/demo.gif)
 
 ```bash
 ack-ui
@@ -63,6 +91,26 @@ ack-ui
 
 这是验证安装是否完整最快的方式：能看到实时日志、步骤状态和 HTML 报告，
 说明控制台、配方引擎、报告渲染三段链路都通了。
+
+不想开网页就用命令行，效果一样：
+
+```bash
+ack init recipe              # 生成一个能直接跑的纯逻辑配方
+ack-recipe my_recipe.yaml    # 跑它，落盘到 runs/my_recipe/
+ack-recipe my_recipe.yaml --baseline auto   # 和上一次对比，退化退出码 1
+```
+
+## 离线 fixture
+
+`examples/16_local_fixture.py` 读 `examples/fixtures/` 下三份静态 HTML，
+把页面形态判断、DOM 提取、分页、空壳页和验证墙识别一次跑完：
+
+```bash
+python examples/16_local_fixture.py
+```
+
+不联网、不启动浏览器、不需要额外依赖。改选择器时可以复制一份 fixture
+当回归测试，把离线断言和真实站点测试分开，别让网络波动背锅。
 
 ## 先跑几个例子
 
@@ -115,6 +163,15 @@ HTTP 侧走 curl_cffi，403/429 先分类再决定要不要开浏览器。签名
 ## 命令行
 
 ```bash
+# 自检环境：Python、可选依赖、Chrome/Edge、端口、目录、代理
+ack doctor
+ack doctor --json                 # 给 CI 用的机器可读输出
+
+# 生成能直接跑的骨架（logic 零依赖 / http / browser）
+ack init recipe
+ack init recipe --type http --out jobs/daily.yaml
+ack init health                   # 等价 ack-health --init
+
 # 一站式探测：给 URL 和目标字段，直接出结论（URL 换成你的目标站）
 ack-probe --url "https://example.com" --field fansNum --quick
 
@@ -211,7 +268,7 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 
 `docs/` 下按场景分：
 
-- 入门：01 决策与方法论、02 patchright 实战规则、04 新平台接入 SOP
+- 入门：32 三分钟上手、01 决策与方法论、02 patchright 实战规则、04 新平台接入 SOP
 - 找数据：09 JS 包找接口、19 数据源选型、22 签名剥离、23 路径审计
 - 稳定性：03 防风控、05 排障、06 踩坑、24 健康体检、25 冒烟
 - Agent：12 任务模板、15 工作流、17 发现与固化、26 MCP 接入、27 技术验证
@@ -220,7 +277,7 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 - 发布：30 发版与 PyPI
 - 案例：21 站点形态实测、28 掘金真实采集
 
-`examples/` 有 15 个脚本：01/02/05/10~15 可无参数直接运行；03 需要人工扫码登录；
+`examples/` 有 16 个脚本：01/02/05/10~16 可无参数直接运行；03 需要人工扫码登录；
 04 需要联网和浏览器；06/08/09 必须传 `--url`；07 必须传平台 YAML 配置。
 `tools/` 是命令行入口，实现在 `src/anti_crawl_kit/tools/`。
 
