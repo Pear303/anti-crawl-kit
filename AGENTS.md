@@ -233,7 +233,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 | **MCP 接入** | `ack-mcp`（15 tools / 3 prompts / 4 resources） | **可选**：给非工程 agent 用；coding agent 读本文件即可 |
 | **立项评估** | `ack-assess`（G0~G4 + Go/No-Go） | **必须**：决定做不做、缺口在哪 |
 | **结果展示** | `ack-report`（单文件 HTML）、`ack-ui`（本地控制台） | **可选**：给人看结论、跑 recipe，不替代判断 |
-| **结果对比** | `ack-report --baseline`、`runs/<recipe>/latest.json` | **可选**：看趋势和退化，适合每日监控 / CI |
+| **结果对比** | `ack-report --baseline [auto\|JSON]`、`ack-recipe --baseline auto` | **可选**：看趋势和退化，适合每日监控 / CI |
 
 ---
 
@@ -246,9 +246,11 @@ agent 手写能解决就手写，但不要裸 `requests`。
   - 按需：`pip install -e ".[browser]"` / `".[http]"` / `".[config]"` / `".[mcp]"`
 - `requirements.txt` 由 `scripts/gen_requirements.py` 生成，勿手改
 - 临时文件用 `C:\Windows\Temp\opencode`
-- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke` / `ack-mcp` / `ack-assess` / `ack-report` / `ack-ui`
+- 安装后 CLI：`ack-probe` / `ack-hunt` / `ack-dom` / `ack-detect` / `ack-bench` / `ack-audit` / `ack-health` / `ack-smoke` / `ack-mcp` / `ack-assess` / `ack-report` / `ack-recipe` / `ack-ui`
 - 发布：改 `src/anti_crawl_kit/__init__.py` 的 `__version__`，打 `v*` tag 并推送；`release.yml` 自动构建、发 PyPI、建 GitHub Release。详见 `docs/30-发布流程.md`。
-- `ack-ui` 每次运行落盘到 `runs/<recipe>/<时间戳>.json|html` + `latest.*`；`ack-report --baseline` 可直接拿 `latest.json` 或历史时间戳文件做对比，有退化退出码 1。
+- `ack-ui` 每次运行落盘到 `runs/<recipe>/<时间戳>.json|html` + `latest.*`；`ack-recipe` 用同一套命名在命令行跑配方，两者共用 `runs.py`。
+- 结果对比：`ack-report --baseline auto` / `ack-recipe --baseline auto` 在同目录找上一次同类型报告（跳过 `latest.*`，只找更旧的）；有退化退出码 1。每日监控模板见 `examples/ci/daily-recipe.yml`，说明见 `docs/31-每日监控与退化告警.md`。
+- `ack-ui` 点历史报告里的配方名会调 `/api/runs/history`，复用 `report_diff` 显示最近两次的对比；`ack-report --dir` 生成的 `index.html` / `report.html` 不计入历史。
 
 ```bash
 python -m pytest tests -q             # 离线测试，应全绿
