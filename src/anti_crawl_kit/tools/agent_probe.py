@@ -416,7 +416,7 @@ def _summarize(decision: str, evidence: dict, candidates: list[dict]) -> str:
     return f"未找到明确数据源，需要人工确认{suffix}"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Agent 一站式页面探测")
     parser.add_argument("--url", required=True, help="目标页面 URL")
     parser.add_argument("--field", default="", help="想找的字段名，如 fansNum")
@@ -451,7 +451,7 @@ def main() -> int:
         default="",
         help="与基线 JSON 对比，输出变更点（页面改版/接口变动时用）",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     cookies = parse_cookie_header(args.cookie)
 

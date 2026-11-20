@@ -65,13 +65,13 @@ def _checks(data: dict) -> dict:
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="反检测自检")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--only", default="", help="只跑指定站点，如 sannysoft")
     parser.add_argument("--out", default="output/detector")
     parser.add_argument("--json", action="store_true", help="输出结构化 JSON")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     from anti_crawl_kit.session import BrowserSession
 

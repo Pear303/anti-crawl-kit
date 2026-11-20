@@ -35,3 +35,21 @@ def test_example_runs_offline_and_passes():
     assert "spa_shell" in out
     assert "captcha_wall" in out
     assert "命中 10 条" in out
+
+
+def test_example_survives_gbk_console():
+    """Windows 默认 GBK 控制台下 ¥ 不能让进程崩（safe_print 兜底）。"""
+    env = dict(os.environ, PYTHONIOENCODING="gbk")
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT)],
+        capture_output=True,
+        text=True,
+        encoding="gbk",
+        errors="replace",
+        timeout=60,
+        cwd=ROOT,
+        env=env,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "[OK]" in proc.stdout
+    assert "Traceback" not in proc.stdout + proc.stderr

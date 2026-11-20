@@ -47,3 +47,11 @@ def test_every_alias_module_is_importable():
     for name, (module, func) in COMMANDS.items():
         imported = importlib.import_module(module)
         assert callable(getattr(imported, func)), name
+
+
+@pytest.mark.parametrize("name", sorted(COMMANDS))
+def test_every_command_help_exits_zero(name):
+    """ack <子命令> --help 必须能跑：主入口会转发 argv，不能假设目标 main() 只收 sys.argv。"""
+    with pytest.raises(SystemExit) as exc:
+        ack_main([name, "--help"])
+    assert exc.value.code == 0

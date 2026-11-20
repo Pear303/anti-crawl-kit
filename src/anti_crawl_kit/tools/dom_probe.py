@@ -51,14 +51,14 @@ CANDIDATE_JS = """() => {
 }"""
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="DOM / API 探测")
     parser.add_argument("--url", required=True)
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--wait", type=float, default=3.0, help="页面加载后等待秒数")
     parser.add_argument("--data-dir", default="", help="复用登录态的 profile 目录")
     parser.add_argument("--out", default="", help="把完整结果写入 JSON 文件")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     from anti_crawl_kit.api_discovery import ApiDiscoverer
     from anti_crawl_kit.session import BrowserSession
