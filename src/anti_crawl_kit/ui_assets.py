@@ -101,6 +101,33 @@ h1 { font-size: 22px; margin: 0 0 6px; font-weight: 650; }
 .steps { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
 .steps li { margin: 3px 0; }
 .steps code { color: var(--text); }
+/* 历史对比 */
+.side li.run-item { display: flex; align-items: center; gap: 2px; }
+.side li.run-item button { flex: 1; min-width: 0; }
+.side li.run-item a.open {
+  width: auto; flex: none; padding: 7px 6px; color: var(--muted); font-size: 12px;
+}
+.delta {
+  display: inline-block; padding: 1px 9px; border-radius: 999px;
+  font-size: 11px; border: 1px solid var(--line); color: var(--muted);
+}
+.delta.regressed, .delta.removed { color: var(--fail); border-color: var(--fail); }
+.delta.improved { color: var(--ok); border-color: var(--ok); }
+.delta.added, .delta.changed { color: var(--info); border-color: var(--info); }
+table.diff { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.diff th, table.diff td {
+  text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line);
+}
+table.diff th { color: var(--muted); font-weight: 500; }
+table.diff tr.regressed td { background: rgba(207, 34, 46, 0.06); }
+table.diff tr.improved td { background: rgba(26, 127, 55, 0.06); }
+.mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+ul.history { list-style: none; margin: 0; padding: 0; }
+ul.history li {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px;
+}
+ul.history li:last-child { border-bottom: 0; }
 a.link { color: var(--info); }
 footer { color: var(--muted); font-size: 11px; margin-top: 30px; }
 @media (max-width: 720px) {
@@ -184,11 +211,91 @@ async function loadRuns() {
       return;
     }
     runsEl.innerHTML = rows.slice(0, 30).map(function (row) {
-      return '<li><a href="' + esc(row.url) + '" target="_blank">' +
-        '<span>' + esc(row.name) + '</span><span class="meta">' + esc(row.kind) + '</span></a></li>';
+      const meta = row.count ? row.count + ' 份' : row.kind;
+      return '<li class="run-item">' +
+        '<button data-folder="' + esc(row.folder || '') + '" data-name="' + esc(row.name) + '">' +
+        '<span>' + esc(row.name) + '</span><span class="meta">' + esc(meta) + '</span></button>' +
+        '<a class="open" href="' + esc(row.url) + '" target="_blank" rel="noopener" ' +
+        'title="打开最新报告">↗</a></li>';
     }).join('');
+    runsEl.querySelectorAll('button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        runsEl.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        showHistory(btn.dataset.folder, btn.dataset.name);
+      });
+    });
   } catch (err) {
     runsEl.innerHTML = '<li class="meta">' + esc(err.message) + '</li>';
+  }
+}
+
+const CHANGE_LABELS = {
+  same: '不变', regressed: '退化', improved: '改善',
+  added: '新增', removed: '移除', changed: '变化'
+};
+
+async function showHistory(folder, name) {
+  setStatus('读取历史…', 'busy');
+  try {
+    const data = await api('/api/runs/history?dir=' + encodeURIComponent(folder));
+    const diff = data.diff;
+    let body = '';
+
+    if (!diff) {
+      const why = data.history.length < 2
+        ? '只有一份报告，攒够两份才会出现对比。'
+        : '两份报告类型不同，无法对比。';
+      body = '<div class="card"><h3>与上一次对比</h3>' +
+        '<p class="desc">' + esc(why) + '</p></div>';
+    } else {
+      const rows = [].concat(diff.items || [], diff.metrics || [])
+        .filter(function (item) { return item.change !== 'same'; })
+        .map(function (item) {
+          return '<tr class="' + esc(item.change) + '">' +
+            '<td>' + esc(item.label) + '</td>' +
+            '<td class="mono">' + esc(item.before) + '</td>' +
+            '<td class="mono">' + esc(item.after) + '</td>' +
+            '<td><span class="delta ' + esc(item.change) + '">' +
+            esc(CHANGE_LABELS[item.change] || item.change) + '</span></td></tr>';
+        }).join('');
+
+      body = '<div class="card"><h3>与上一次对比</h3>' +
+        '<div class="row" style="margin-top:0">' +
+        '<span class="delta regressed">退化 ' + (diff.regressions || 0) + '</span>' +
+        '<span class="delta improved">改善 ' + (diff.improvements || 0) + '</span>' +
+        '<span class="delta added">新增 ' + (diff.added || 0) + '</span>' +
+        '<span class="delta removed">移除 ' + (diff.removed || 0) + '</span>' +
+        '</div>' +
+        (rows
+          ? '<table class="diff"><thead><tr><th>项目</th><th>上一次</th><th>本次</th><th>变化</th></tr></thead>' +
+            '<tbody>' + rows + '</tbody></table>'
+          : '<p class="desc" style="margin:12px 0 0">与上一次一致，没有变化。</p>') +
+        '</div>';
+    }
+
+    const historyRows = data.history.map(function (item) {
+      const open = item.url
+        ? '<a class="link" href="' + esc(item.url) + '" target="_blank" rel="noopener">打开</a>'
+        : '<span class="meta">仅 JSON</span>';
+      return '<li><span class="mono">' + esc(item.stem) + '</span>' +
+        '<span class="meta">' + esc(item.status) + ' · ' + esc(item.finished_at) +
+        ' · ' + open + '</span></li>';
+    }).join('');
+
+    panel.innerHTML =
+      '<h1>' + esc(name || folder) + '</h1>' +
+      '<p class="desc">共 ' + data.history.length + ' 份报告' +
+      (data.current ? ' · 最新 ' + esc(data.current.finished_at) : '') + '</p>' +
+      body +
+      '<div class="card"><h3>历史</h3><ul class="history">' +
+      (historyRows || '<li class="meta">没有报告</li>') + '</ul></div>' +
+      '<footer>对比口径与 <code>ack-report --baseline auto</code> 一致。' +
+      '报告落盘在 runs/ 下，验证墙不会重试。</footer>';
+    setStatus('就绪');
+  } catch (err) {
+    panel.innerHTML = '<div class="empty">' + esc(err.message) + '</div>';
+    setStatus('读取失败', 'bad');
   }
 }
 

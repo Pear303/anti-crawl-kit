@@ -147,8 +147,9 @@ def test_run_persists_latest_report(service: UiService):
     row = next(item for item in rows if item["name"] == "local_demo")
     assert row["kind"] == "recipe"
     assert row["url"].endswith("/latest.html")
-    # 时间戳报告 + latest 副本
-    assert row["count"] >= 2
+    # 只数时间戳报告，latest 副本不算一份
+    assert row["count"] == 1
+    assert row["folder"] == "local_demo"
 
 
 def test_snapshot_done_means_report_already_persisted(service: UiService, monkeypatch):
@@ -237,6 +238,113 @@ def test_runs_list(service: UiService):
     assert len(rows) == 1
     assert rows[0]["name"] == "demo"
     assert rows[0]["url"].startswith("/runs/")
+
+
+def test_runs_skips_generated_index(service: UiService):
+    """ack-report --dir 生成的 index.html 不是一份报告，不能出现在历史里。"""
+    (service.runs_dir / "index.html").write_text("<html>index</html>", encoding="utf-8")
+    (service.runs_dir / "report.html").write_text("<html>report</html>", encoding="utf-8")
+
+    names = [row["name"] for row in service.runs()]
+    assert names == ["demo"]
+
+
+def _write_run(folder: Path, stem: str, status: str, ok: bool, mtime: float) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{stem}.json"
+    path.write_text(
+        json.dumps(
+            {
+                "run_id": stem,
+                "recipe_id": folder.name,
+                "status": status,
+                "finished_at": stem,
+                "steps": [
+                    {"id": "check", "uses": "assert", "status": "ok" if ok else "failed"}
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    os.utime(path, (mtime, mtime))
+    return path
+
+
+def test_history_returns_two_latest_and_diff(service: UiService):
+    folder = service.runs_dir / "local_demo"
+    now = time.time()
+    _write_run(folder, "20261119-090000", "done", True, now - 3600)
+    _write_run(folder, "20261120-090000", "failed", False, now)
+
+    data = service.history("local_demo")
+    assert data["folder"] == "local_demo"
+    assert data["current"]["stem"] == "20261120-090000"
+    assert data["baseline"]["stem"] == "20261119-090000"
+    assert data["diff"]["regressions"] == 1
+    assert data["diff"]["items"][0]["label"] == "check"
+    # 只落 JSON、没有 HTML 的旧报告不给链接，前端显示「仅 JSON」
+    assert data["history"][0]["url"] == ""
+
+
+def test_history_links_existing_html(service: UiService):
+    folder = service.runs_dir / "local_demo"
+    now = time.time()
+    _write_run(folder, "20261119-090000", "done", True, now - 3600)
+    _write_run(folder, "20261120-090000", "done", True, now)
+    (folder / "20261120-090000.html").write_text("<html>ok</html>", encoding="utf-8")
+
+    data = service.history("local_demo")
+    assert data["history"][0]["url"] == "/runs/local_demo/20261120-090000.html"
+
+
+def test_history_skips_latest_copy(service: UiService):
+    folder = service.runs_dir / "local_demo"
+    now = time.time()
+    _write_run(folder, "20261119-090000", "done", True, now - 3600)
+    _write_run(folder, "latest", "done", True, now)
+
+    data = service.history("local_demo")
+    assert [item["stem"] for item in data["history"]] == ["20261119-090000"]
+    assert data["diff"] is None
+
+
+def test_history_single_report_has_no_diff(service: UiService):
+    _write_run(service.runs_dir / "solo", "20261120-090000", "done", True, time.time())
+    data = service.history("solo")
+    assert data["current"]["stem"] == "20261120-090000"
+    assert data["baseline"] is None
+    assert data["diff"] is None
+
+
+def test_history_rejects_escape_and_missing(service: UiService):
+    with pytest.raises(PermissionError):
+        service.history("../")
+    with pytest.raises(FileNotFoundError):
+        service.history("nope")
+
+
+def test_http_runs_history_endpoint(service: UiService):
+    folder = service.runs_dir / "local_demo"
+    now = time.time()
+    _write_run(folder, "20261119-090000", "done", True, now - 3600)
+    _write_run(folder, "20261120-090000", "failed", False, now)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(service))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    port = server.server_address[1]
+    try:
+        status, body = _http(port, "GET", "/api/runs/history?dir=local_demo")
+        assert status == 200
+        payload = json.loads(body)
+        assert payload["current"]["stem"] == "20261120-090000"
+        assert payload["diff"]["regressions"] == 1
+
+        status, _ = _http(port, "GET", "/api/runs/history?dir=..")
+        assert status == 403
+    finally:
+        server.shutdown()
+        server.server_close()
 
 
 def test_unknown_job_raises(service: UiService):

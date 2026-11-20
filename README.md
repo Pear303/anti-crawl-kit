@@ -106,7 +106,8 @@ HTTP 侧走 curl_cffi，403/429 先分类再决定要不要开浏览器。签名
 单文件 HTML（样式和脚本都内嵌，双击就能开）；`ack-ui` 起一个只监听本机
 的控制台，选配方、填参数、跑、看实时日志，agent 检查点也能在页面上继续。
 每次运行结束会落盘到 `runs/<recipe>/<时间戳>.json|html`，并更新 `latest.*`，
-关掉控制台后还能回看。同一条配方也能用 `ack-recipe` 在命令行跑，
+关掉控制台后还能回看；点历史报告里的配方名，直接看最近两次的退化对比。
+同一条配方也能用 `ack-recipe` 在命令行跑，
 `--baseline auto` 自动和上一次对比，有退化退出码 1，适合 cron 和 CI。
 
 立项阶段可以用 `ack-assess` 走 G0~G4，输出 Go/No-Go 和缺口清单。
@@ -181,6 +182,8 @@ POST /api/run                          {"recipe": "<id 或相对路径>", "input
 GET  /api/jobs/<id>                    job 状态
 GET  /api/jobs/<id>/events             SSE 事件流
 GET  /api/jobs/<id>/report             本次运行的 HTML 报告
+GET  /api/runs                         历史报告（每个配方一份）
+GET  /api/runs/history?dir=<目录>      历史列表 + 最近两次对比
 ```
 
 完整契约和页面约束见 [docs/29](docs/29-可视化报告与本地控制台.md)。

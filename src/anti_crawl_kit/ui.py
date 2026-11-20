@@ -36,8 +36,9 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from .console import redact_mapping
 from .recipe import list_recipes, load_recipe, resume_recipe, run_recipe
-from .report import render_html
-from .runs import persist_run
+from .report import detect_kind, load_json, render_html
+from .report_diff import diff_reports
+from .runs import AUTO_SKIP_STEMS, persist_run
 from .ui_assets import INDEX_HTML
 
 _FIRST_RUN = object()
@@ -133,7 +134,11 @@ class UiService:
         """历史报告：每个目录只列最新一份，避免 latest 和时间戳重复。"""
         if not self.runs_dir.is_dir():
             return []
-        files = [path for path in self.runs_dir.rglob("*.html") if path.is_file()]
+        files = [
+            path
+            for path in self.runs_dir.rglob("*.html")
+            if path.is_file() and path.name.lower() not in {"index.html", "report.html"}
+        ]
         groups: dict[Path, list[Path]] = {}
         for path in files:
             groups.setdefault(path.parent, []).append(path)
@@ -160,19 +165,95 @@ class UiService:
                 name = path.stem
                 kind = "runs"
                 count = 0
+                folder = ""
             else:
                 name = parent.name
                 kind = "recipe" if (parent / "latest.json").is_file() else name
-                count = len(groups[parent])
+                # 份数以 JSON 为准，和 history 口径一致；latest 是副本不算
+                count = len(
+                    [
+                        item
+                        for item in parent.glob("*.json")
+                        if item.is_file() and item.stem.lower() not in AUTO_SKIP_STEMS
+                    ]
+                )
+                folder = parent.relative_to(self.runs_dir).as_posix()
             rows.append(
                 {
                     "name": name,
                     "kind": kind,
                     "url": "/runs/" + quote(rel, safe="/"),
                     "count": count,
+                    "folder": folder,
                 }
             )
         return rows
+
+    def history(self, folder: str) -> dict[str, Any]:
+        """某个配方目录的历史报告，以及最近两次的对比。
+
+        ``folder`` 是相对 ``runs_dir`` 的路径。越界抛 ``PermissionError``，
+        不存在抛 ``FileNotFoundError``，由 HTTP 层转成 403 / 404。
+        """
+        target = (self.runs_dir / folder).resolve()
+        try:
+            target.relative_to(self.runs_dir)
+        except ValueError as exc:
+            raise PermissionError("报告目录越界") from exc
+        if not target.is_dir():
+            raise FileNotFoundError(f"报告目录不存在: {folder}")
+
+        files = [
+            path
+            for path in target.glob("*.json")
+            if path.is_file() and path.stem.lower() not in AUTO_SKIP_STEMS
+        ]
+        files.sort(key=lambda path: (path.stat().st_mtime, path.stem), reverse=True)
+
+        history: list[dict[str, Any]] = []
+        for path in files[:50]:
+            try:
+                data = load_json(path)
+                rel = path.relative_to(self.runs_dir).as_posix()
+            except (OSError, ValueError):
+                continue
+            history.append(
+                {
+                    "path": rel,
+                    "stem": path.stem,
+                    "url": (
+                        "/runs/" + quote(rel[:-5] + ".html", safe="/")
+                        if (self.runs_dir / (rel[:-5] + ".html")).is_file()
+                        else ""
+                    ),
+                    "finished_at": str(
+                        data.get("finished_at") or data.get("started_at") or ""
+                    ),
+                    "status": str(data.get("status") or data.get("verdict") or ""),
+                    "kind": detect_kind(data),
+                }
+            )
+
+        current = history[0] if history else None
+        baseline = history[1] if len(history) > 1 else None
+        diff = None
+        if current and baseline and current["kind"] == baseline["kind"]:
+            try:
+                diff = diff_reports(
+                    load_json(self.runs_dir / current["path"]),
+                    load_json(self.runs_dir / baseline["path"]),
+                    current["kind"],
+                )
+            except (OSError, ValueError):
+                diff = None
+
+        return {
+            "folder": folder,
+            "history": history,
+            "current": current,
+            "baseline": baseline,
+            "diff": diff,
+        }
 
     def _persist_job(self, job: UiJob, status: str) -> None:
         """把终态作业写成 runs/<recipe>/<时间戳>.json|html 和 latest 副本。
@@ -425,6 +506,8 @@ def make_handler(service: UiService):
                     self._json(service.recipe_detail((query.get("path") or [""])[0]))
                 elif path == "/api/runs":
                     self._json(service.runs())
+                elif path == "/api/runs/history":
+                    self._json(service.history((query.get("dir") or [""])[0]))
                 elif path.startswith("/api/jobs/"):
                     self._handle_job(path)
                 elif path.startswith("/runs/"):
