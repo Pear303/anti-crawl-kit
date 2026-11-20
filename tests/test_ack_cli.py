@@ -55,3 +55,11 @@ def test_every_command_help_exits_zero(name):
     with pytest.raises(SystemExit) as exc:
         ack_main([name, "--help"])
     assert exc.value.code == 0
+
+
+@pytest.mark.parametrize("name", ["dom", "detect"])
+def test_browser_tools_expose_skip_version_check(name, capsys):
+    """版本超前/滞后时，探测工具要能用显式开关跑通，而不是只能等降级。"""
+    with pytest.raises(SystemExit):
+        ack_main([name, "--help"])
+    assert "--skip-version-check" in capsys.readouterr().out

@@ -71,6 +71,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--only", default="", help="只跑指定站点，如 sannysoft")
     parser.add_argument("--out", default="output/detector")
     parser.add_argument("--json", action="store_true", help="输出结构化 JSON")
+    parser.add_argument(
+        "--skip-version-check",
+        action="store_true",
+        help="跳过 Chrome 与 patchright 大版本检查（确认兼容时使用）",
+    )
     args = parser.parse_args(argv)
 
     from anti_crawl_kit.session import BrowserSession
@@ -80,7 +85,11 @@ def main(argv: list[str] | None = None) -> int:
 
     results: list[dict] = []
 
-    with BrowserSession(headless=args.headless, anti_crawl=False) as page:
+    with BrowserSession(
+        headless=args.headless,
+        anti_crawl=False,
+        skip_version_check=args.skip_version_check,
+    ) as page:
         for name, url in TARGETS:
             if args.only and args.only != name:
                 continue

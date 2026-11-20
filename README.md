@@ -66,7 +66,7 @@ ack doctor
 
 ```text
 [OK]    Python 3.13.3 (>= 3.10)
-[OK]    anti-crawl-kit 0.13.1
+[OK]    anti-crawl-kit 0.13.2
 [WARN]  patchright 未安装
         browser_* 步骤不可用
         → pip install "anti-crawl-kit[browser]"

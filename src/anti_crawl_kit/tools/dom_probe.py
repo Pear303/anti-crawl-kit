@@ -58,6 +58,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--wait", type=float, default=3.0, help="页面加载后等待秒数")
     parser.add_argument("--data-dir", default="", help="复用登录态的 profile 目录")
     parser.add_argument("--out", default="", help="把完整结果写入 JSON 文件")
+    parser.add_argument(
+        "--skip-version-check",
+        action="store_true",
+        help="跳过 Chrome 与 patchright 大版本检查（确认兼容时使用）",
+    )
     args = parser.parse_args(argv)
 
     from anti_crawl_kit.api_discovery import ApiDiscoverer
@@ -67,6 +72,7 @@ def main(argv: list[str] | None = None) -> int:
         headless=args.headless,
         data_dir=args.data_dir or None,
         anti_crawl=False,
+        skip_version_check=args.skip_version_check,
     ) as page:
         page.goto(args.url, timeout=45000)
         page.wait_for_timeout(int(args.wait * 1000))
