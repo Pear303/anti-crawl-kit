@@ -69,7 +69,7 @@ runs directory, and proxy variables. Every problem comes with a copy-paste fix:
 
 ```text
 [OK]    Python 3.12.4 (>= 3.10)
-[OK]    anti-crawl-kit 0.13.2
+[OK]    anti-crawl-kit 0.13.3
 [WARN]  patchright 未安装
         browser_* steps are unavailable
         → pip install "anti-crawl-kit[browser]"
@@ -244,6 +244,8 @@ CAPTCHA solving.
 - Monitoring: 31 daily monitoring and regression alerts
 - Release: 30 release and PyPI
 - Case studies: 21 site shapes, 28 Juejin real-world run
+
+Release notes: [CHANGELOG.md](CHANGELOG.md).
 
 `examples/` has 16 scripts: 01/02/05/10–16 run without arguments; 03 needs a
 manual QR login; 04 needs network and a browser; 06/08/09 require `--url`;

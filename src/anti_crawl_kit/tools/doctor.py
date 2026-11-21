@@ -160,8 +160,8 @@ def _check_browsers() -> list[Check]:
         return checks
 
     expected = detect_patchright_chromium()
-    actual = chrome or edge
-    if not expected:
+    actual = chrome or edge or ""
+    if not expected or not actual:
         checks.append(
             Check(
                 "INFO",

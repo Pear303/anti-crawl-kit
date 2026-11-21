@@ -25,6 +25,45 @@ jobs:
       - name: Ruff
         run: ruff check src tests
 
+  # 类型检查：先只报告不阻塞（当前基线 140+），新代码不应继续增加
+  typecheck:
+    name: typecheck (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements.txt
+      - name: Install (core + dev only)
+        run: pip install -e ".[dev]"
+      - name: Mypy (report only)
+        run: mypy src/anti_crawl_kit
+
+  # Windows：路径分隔符、GBK 控制台、文件 mtime 精度都和 Linux 不同
+  windows-offline:
+    name: windows (py3.12)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements.txt
+      - name: Install (core + dev only)
+        run: pip install -e ".[dev]"
+      - name: Pytest (offline)
+        run: pytest -q -m "not browser"
+        env:
+          PYTHONIOENCODING: utf-8
+
   # 纯逻辑：不装 patchright / curl_cffi，证明包可以在无浏览器环境使用
   offline:
     name: offline (py${{ matrix.python-version }})

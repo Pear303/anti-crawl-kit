@@ -73,8 +73,16 @@ BrowserSession(headless=False)   # viewport=None + --start-maximized
 BrowserSession(headless=True, viewport={"width": 1920, "height": 1080})
 ```
 
-无头 UA 会带 `HeadlessChrome`。如果目标站对无头敏感，用有头或
-`--headless=new`（patchright 新版本支持时）。
+无头 UA 必然带 `HeadlessChrome`。2026-11 实测：Chrome 158 + patchright 1.62.2 / 1.64.4，
+`headless=True` 与 `headless=False + args=["--headless=new"]` 拿到的 UA 完全一样，
+都是 `HeadlessChrome/158.0.0.0`。所以这不是补丁能绕过的，只有三条路：
+
+1. 用有头模式（UA 真实，代价是要窗口）；
+2. Linux 上用 xvfb 跑有头；
+3. 接受这个特征，只采对无头不敏感的站。
+
+不要靠覆写 UA 解决：固定 UA 与 `sec-ch-ua`、Chrome 版本对不上，反而更像机器人。
+`ack-detect --headless` 会把这条标成未通过，并提示「属预期」。
 
 ---
 

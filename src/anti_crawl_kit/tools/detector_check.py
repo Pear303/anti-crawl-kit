@@ -67,7 +67,11 @@ def _checks(data: dict) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="反检测自检")
-    parser.add_argument("--headless", action="store_true")
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="无头模式（UA 会带 HeadlessChrome，这是 Chrome 行为，不是补丁能改的）",
+    )
     parser.add_argument("--only", default="", help="只跑指定站点，如 sannysoft")
     parser.add_argument("--out", default="output/detector")
     parser.add_argument("--json", action="store_true", help="输出结构化 JSON")
@@ -146,6 +150,8 @@ def main(argv: list[str] | None = None) -> int:
             if record["checks"]:
                 failed = [k for k, v in record["checks"].items() if not v]
                 print(f"    未通过: {failed or '无'}")
+                if "ua_not_headless" in failed:
+                    print("    → 无头 UA 必带 HeadlessChrome；要规避请用有头或 xvfb")
             if record["screenshot"]:
                 print(f"    截图: {record['screenshot']}")
             if record["error"]:

@@ -66,7 +66,7 @@ ack doctor
 
 ```text
 [OK]    Python 3.13.3 (>= 3.10)
-[OK]    anti-crawl-kit 0.13.2
+[OK]    anti-crawl-kit 0.13.3
 [WARN]  patchright 未安装
         browser_* 步骤不可用
         → pip install "anti-crawl-kit[browser]"
@@ -276,6 +276,8 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 - 监控：31 每日监控与退化告警
 - 发布：30 发版与 PyPI
 - 案例：21 站点形态实测、28 掘金真实采集
+
+变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 `examples/` 有 16 个脚本：01/02/05/10~16 可无参数直接运行；03 需要人工扫码登录；
 04 需要联网和浏览器；06/08/09 必须传 `--url`；07 必须传平台 YAML 配置。
