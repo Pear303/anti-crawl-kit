@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-from anti_crawl_kit.assess import load_assessment_config
 from anti_crawl_kit.assess_draft import (
     draft_assessment,
     pick_fields,
@@ -56,6 +55,9 @@ def test_pick_fields_dedupes_parent_child_text() -> None:
 
 
 def test_draft_assessment_yaml_is_loadable(tmp_path: Path) -> None:
+    pytest.importorskip("yaml", reason="解析评估配置需要 [config] extra")
+    from anti_crawl_kit.assess import load_assessment_config
+
     result = draft_assessment(PROBE)
     config_path = tmp_path / "books_assessment.yaml"
     config_path.write_text(result["config_yaml"], encoding="utf-8")
