@@ -76,6 +76,21 @@ def test_classify_page() -> None:
     assert "shape" in result
 
 
+def test_probe_url_captcha_wall_stops() -> None:
+    # 验证墙的 kind 是 captcha_wall；决策必须是 stop，不能让 Agent 继续开浏览器
+    html = (
+        "<html><head><title>访问验证</title></head><body>"
+        "<p>请完成安全验证后继续访问</p>"
+        + "<p>" + "正文" * 200 + "</p>"
+        + "</body></html>"
+    )
+    service = _service({"https://example.com/": html})
+    result = service.probe_url("https://example.com/")
+    assert result["shape"]["kind"] == "captcha_wall"
+    assert result["decision"] == "stop"
+    assert "停" in result["next_actions"][0]
+
+
 def test_extract_state() -> None:
     service = _service({"https://example.com/": NEXT_HTML})
     result = service.extract_state("https://example.com/")
@@ -100,9 +115,69 @@ def test_list_capabilities() -> None:
     data = service.list_capabilities()
     assert "probe_url" in data["tools"]
     assert "assess_project" in data["tools"]
+    # 补 G2 断裂点：MCP 必须能直接拿到选择器并生成评估配置
+    assert "dom_probe" in data["tools"]
+    assert "draft_assessment" in data["tools"]
     assert "http_get" in data["steps"]
     assert "curl_cffi" in data["optional_deps"]
     assert data["browser_channel"] == "auto"
+
+
+def test_dom_probe_service(monkeypatch) -> None:
+    from anti_crawl_kit.tools import dom_probe as dom_module
+
+    seen: dict[str, object] = {}
+
+    def fake_probe(url: str, **kwargs):
+        seen.update(kwargs)
+        return {
+            "ok": True,
+            "tool": "dom_probe",
+            "url": url,
+            "item_candidates": [{"selector": "article.item", "count": 3, "outline": []}],
+        }
+
+    monkeypatch.setattr(dom_module, "probe_dom", fake_probe)
+    service = _service({}, allow_hosts=("example.com",))
+    result = service.dom_probe("https://example.com/list", headless=False, wait=1.0)
+
+    assert result["ok"] is True
+    assert result["item_candidates"][0]["selector"] == "article.item"
+    assert seen["headless"] is False
+    assert seen["wait"] == 1.0
+
+
+def test_dom_probe_service_blocked_by_allow_hosts(monkeypatch) -> None:
+    from anti_crawl_kit.tools import dom_probe as dom_module
+
+    monkeypatch.setattr(dom_module, "probe_dom", lambda url, **kwargs: {"ok": True})
+    service = _service({}, allow_hosts=("example.com",))
+    with pytest.raises(PermissionError, match="allow_hosts"):
+        service.dom_probe("https://evil.com/")
+
+
+def test_draft_assessment_service(tmp_path: Path) -> None:
+    service = _service({})
+    probe = {
+        "url": "https://example.com/list",
+        "item_candidates": [
+            {
+                "selector": "article.item",
+                "count": 4,
+                "sample": "标题 1",
+                "outline": [
+                    {"selector": "h2", "text": "标题 1", "href": ""},
+                    {"selector": "span.price", "text": "¥19.9", "href": ""},
+                ],
+            }
+        ],
+    }
+    result = service.draft_assessment(probe, out_dir=str(tmp_path))
+
+    assert result["item_selector"] == "article.item"
+    assert Path(result["config_path"]).exists()
+    assert Path(result["audit_path"]).exists()
+    assert "article.item" in Path(result["config_path"]).read_text(encoding="utf-8")
 
 
 def test_list_capabilities_channel() -> None:
@@ -228,7 +303,11 @@ def test_prune_profile_cache_via_service(tmp_path: Path) -> None:
 
 
 def test_assess_project_job(tmp_path: Path, monkeypatch) -> None:
-    from anti_crawl_kit import assess as assess_module
+    # 注意：anti_crawl_kit.assess 既是子模块又被公开成同名函数（惰性导出），
+    # from anti_crawl_kit import assess 拿到的是函数，必须用 import_module 取模块。
+    import importlib
+
+    assess_module = importlib.import_module("anti_crawl_kit.assess")
 
     monkeypatch.setattr(
         assess_module, "_default_fetch", lambda url: (200, SSR_HTML, "")

@@ -235,6 +235,8 @@ class ToolService:
                     "probe_url",
                     "classify_page",
                     "extract_state",
+                    "dom_probe",
+                    "draft_assessment",
                     "hunt_api",
                     "health_check",
                     "smoke_test",
@@ -354,6 +356,61 @@ class ToolService:
                 "preview": preview,
             }
         )
+
+    def dom_probe(
+        self,
+        url: str,
+        *,
+        headless: bool = True,
+        wait: float = 3.0,
+        data_dir: str = "",
+        max_candidates: int = 15,
+        outline_top: int = 3,
+        skip_version_check: bool = False,
+    ) -> dict[str, Any]:
+        """打开页面，返回框架、接口、列表容器与字段选择器候选。
+
+        这是 MCP 侧补齐 G2 的关键：选择器必须来自真实 DOM，不能由 Agent 编。
+        """
+        self._check(url)
+        from .tools.dom_probe import probe_dom
+
+        payload = probe_dom(
+            url,
+            headless=headless,
+            wait=wait,
+            data_dir=data_dir,
+            skip_version_check=skip_version_check,
+            max_candidates=max_candidates,
+            outline_top=outline_top,
+        )
+        return redact_mapping(payload)
+
+    def draft_assessment(
+        self,
+        probe: dict[str, Any],
+        *,
+        platform: str = "",
+        item_selector: str = "",
+        fields: list[str] | None = None,
+        out_dir: str = "",
+        runs: int = 3,
+    ) -> dict[str, Any]:
+        """把 dom_probe 结果转成 ack-assess 配置；out_dir 非空时直接落盘。"""
+        from .assess_draft import draft_assessment as _draft
+        from .assess_draft import write_draft
+
+        result = _draft(
+            probe,
+            platform=platform,
+            item_selector=item_selector,
+            fields=fields,
+            runs=runs,
+            link_audit=bool(out_dir),
+        )
+        if out_dir:
+            result.update(write_draft(result, out_dir))
+        return redact_mapping(result)
 
     def hunt_api(
         self,
@@ -610,7 +667,9 @@ class ToolService:
 
     @staticmethod
     def _decision(shape_kind: str, is_empty: bool) -> str:
-        if shape_kind in ("captcha", "blocked"):
+        # page_shape 的验证墙 kind 是 captcha_wall，只写 captcha 会漏判，
+        # 让 Agent 把验证墙当成 browser_or_js 继续开浏览器。
+        if shape_kind in ("captcha", "captcha_wall", "blocked"):
             return "stop"
         if shape_kind == "login_wall":
             return "login"
@@ -667,8 +726,9 @@ class _maybe_browser:
 
 DECISION_GUIDE = """
 路径优先级：JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM 解析。
-先判形态：ssr / ssr_state / spa_shell / login_wall / captcha / blocked。
+先判形态：ssr / ssr_state / spa_shell / login_wall / captcha_wall / blocked。
 验证墙是止损信号，不是重试信号：停 + 截图 + 通知 + 退出码 2。
+选择器只能来自 dom_probe 的真实输出；拿到后 draft_assessment 生成评估配置。
 拿到接口不等于能纯 HTTP：必须做签名剥离测试，按返回码判 L1/L3。
 未测路径写 not_tested，不能写「不可用」；单次审计不写「生产可用」。
 """.strip()
@@ -713,12 +773,16 @@ def _prompt_new_platform(url: str, platform: str = "") -> str:
     return f"""接新平台：{platform or url}
 
 1. 先跑 probe_url(url="{url}")，按 decision 选择路径。
-2. 需要找接口时再跑 hunt_api（慢，但一次拿全）。
-3. 把平台信息填进 PlatformCapability（单一来源）：
+2. 判成 ssr/spa_shell 时跑 dom_probe，拿列表容器与字段选择器候选
+   （选择器只能来自真实 DOM，不要手写）。
+3. 跑 draft_assessment(probe=..., out_dir="runs/probe")，生成评估配置。
+4. 跑 assess_project(config_path=...)，看 G0~G4 与 Go / No-Go 结论。
+5. 需要找接口时再跑 hunt_api（慢，但一次拿全）。
+6. 把平台信息填进 PlatformCapability（单一来源）：
    collector_module / collector_class / entry_param / auth_cookies / 探针选择器。
-4. 跑 ack-health --config，FAIL 必须为 0。
-5. 用 run_recipe 固化「探测 → 提取 → 断言」，需要判断的地方留 kind: agent 检查点。
-6. 发版前跑 ack-smoke，负向控制必须 PASS。
+7. 跑 ack-health --config，FAIL 必须为 0。
+8. 用 run_recipe 固化「探测 → 提取 → 断言」，需要判断的地方留 kind: agent 检查点。
+9. 发版前跑 ack-smoke，负向控制必须 PASS。
 """
 
 
@@ -759,6 +823,14 @@ def create_server(service: ToolService | None = None):
 
     service = service or ToolService()
     mcp = FastMCP("anti-crawl-kit")
+    # FastMCP 没有 version 参数，serverInfo.version 默认是 MCP SDK 版本。
+    # 覆盖成包版本，避免 Agent 把 SDK 版本当成工具能力版本。
+    try:
+        from . import __version__ as _pkg_version
+
+        mcp._mcp_server.version = _pkg_version
+    except Exception:  # pragma: no cover - SDK 内部结构变化时不影响启动
+        pass
 
     @mcp.tool()
     def list_capabilities() -> dict:
@@ -791,6 +863,63 @@ def create_server(service: ToolService | None = None):
     def extract_state(url: str) -> dict:
         """从 __NEXT_DATA__ / __NUXT__ / __INITIAL_STATE__ 提取 JSON。"""
         return service.extract_state(url)
+
+    @mcp.tool()
+    async def dom_probe(
+        url: str,
+        headless: bool = True,
+        wait: float = 3.0,
+        data_dir: str = "",
+        max_candidates: int = 15,
+        outline_top: int = 3,
+        skip_version_check: bool = False,
+    ) -> dict:
+        """打开页面，给出列表容器与字段选择器候选（G2 的依据）。
+
+        需要 patchright；headless=False 时要有桌面环境。
+        选择器只能从这里或 hand-written 证据来，不要让模型凭空写。
+
+        注意：patchright 的 sync API 不能在 asyncio 事件循环里跑，
+        所以这里必须丢到线程池，不能用同步工具。
+        """
+        import asyncio
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None,
+            lambda: service.dom_probe(
+                url,
+                headless=headless,
+                wait=wait,
+                data_dir=data_dir,
+                max_candidates=max_candidates,
+                outline_top=outline_top,
+                skip_version_check=skip_version_check,
+            ),
+        )
+
+    @mcp.tool()
+    def draft_assessment(
+        probe: dict,
+        platform: str = "",
+        item_selector: str = "",
+        fields: list[str] | None = None,
+        out_dir: str = "",
+        runs: int = 3,
+    ) -> dict:
+        """把 dom_probe 结果转成 ack-assess 配置（YAML）。
+
+        out_dir 非空时直接写盘，返回 config_path / audit_path；
+        为空时只返回 config_yaml / audit_yaml 文本。
+        """
+        return service.draft_assessment(
+            probe,
+            platform=platform,
+            item_selector=item_selector,
+            fields=fields,
+            out_dir=out_dir,
+            runs=runs,
+        )
 
     @mcp.tool()
     def hunt_api(

@@ -40,6 +40,7 @@ _HELP = """\
 常用：
   ack doctor                 自检环境，输出修复建议
   ack init recipe            生成能直接跑的配方骨架
+  ack init assess            从 DOM 探测结果生成评估配置
   ack recipe <file>          跑配方并落盘
   ack report --dir runs      报告转 HTML + 索引
   ack ui                     本地控制台（http://127.0.0.1:8766）

@@ -86,6 +86,15 @@ python tools/dom_probe.py --url "URL" --json
 python examples/05_http_only.py --url "API" --out output/result.json
 ```
 
+pip 安装（没有 `tools/` 目录）时用等价入口：
+
+```bash
+ack probe --url "URL" --field fansNum
+ack hunt --url "URL" --filter popular
+ack dom --url "URL"
+ack assess --config my_assessment.yaml
+```
+
 要求：
 
 - 同样的输入，同样的输出；
@@ -461,12 +470,19 @@ print('items', len(d.get('items', [])))
 
 ### 7.3 你要接 MCP
 
-```text
-需要持续浏览 → Playwright MCP
-需要看网络/调试 → Chrome DevTools MCP
-需要 JS 逆向 → js-reverse-mcp
-需要稳定采集 → 不要用 MCP，用本包 CLI
-```
+分两种用途，不要混：
+
+| 用途 | 选择 |
+|---|---|
+| 持续浏览、调试、看 accessibility tree | Playwright MCP |
+| 看网络 / 断点 / 性能 | Chrome DevTools MCP |
+| JS 逆向 | js-reverse-mcp |
+| 判形态 / 找接口 / 探测选择器 / 生成评估配置 / 跑 G0~G4 | **`ack-mcp`**（本包） |
+| 大批量、需要断点续跑和落盘的采集执行 | **本包 CLI**，不要用 MCP |
+
+也就是说：`ack-mcp` 负责「勘察与评估」，CLI 负责「生产执行」。
+`ack-mcp` 的 `dom_probe` 在事件循环里跑不了 sync playwright，所以它是
+async 工具 + 线程池；接其他 MCP 框架时同样要注意这一点。
 
 ---
 

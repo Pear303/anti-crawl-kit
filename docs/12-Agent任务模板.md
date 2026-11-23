@@ -76,6 +76,11 @@ print(r.status_code, r.data)
 # 4) 需要登录 → 打开有头浏览器
 python tools/dom_probe.py --url "URL" --data-dir ./profiles/demo
 
+# 4.1) 决定「做不做」：探测 → 生成配置 → G0~G4
+python tools/dom_probe.py --url "URL" --headless --out output/dom.json
+ack init assess --from-probe output/dom.json --out-dir runs/survey
+ack assess --config runs/survey/<platform>_assessment.yaml
+
 # 5) 写采集器（复制骨架，不要从零写）
 cp examples/07_config_driven.py examples/my_platform.py
 ```

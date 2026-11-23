@@ -69,7 +69,7 @@ runs directory, and proxy variables. Every problem comes with a copy-paste fix:
 
 ```text
 [OK]    Python 3.12.4 (>= 3.10)
-[OK]    anti-crawl-kit 0.13.3
+[OK]    anti-crawl-kit 0.14.0
 [WARN]  patchright 未安装
         browser_* steps are unavailable
         → pip install "anti-crawl-kit[browser]"
@@ -102,6 +102,8 @@ Prefer the terminal?
 ack init recipe              # generate a runnable pure-logic recipe
 ack-recipe my_recipe.yaml    # run it, persist to runs/
 ack-recipe my_recipe.yaml --baseline auto   # compare with the previous run
+ack init assess --from-probe output/dom.json --out-dir runs/survey
+                             # build a G0–G4 config from a real DOM probe
 ```
 
 ## Offline fixtures
@@ -151,7 +153,10 @@ previous run. `ack-recipe` runs the same recipes from the command line;
 which fits cron and CI.
 
 `ack-assess` walks G0–G4 before you commit to a project and outputs a Go/No-Go
-plus a gap list.
+plus a gap list. `ack init assess` turns an `ack-dom` probe into the assessment
+and path-audit configs, so selectors come from real DOM instead of being typed
+by hand. The MCP server exposes the same path as `dom_probe` →
+`draft_assessment` → `assess_project`.
 
 ## CLI
 

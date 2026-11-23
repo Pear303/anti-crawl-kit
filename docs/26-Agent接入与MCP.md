@@ -195,6 +195,8 @@ recipe 必须显式断言非空：
 | `probe_url` | 同步 | 页面形态 + 空壳 + 建议；`deep=True` 会扫 JS |
 | `classify_page` | 同步 | 只做形态/空壳判定 |
 | `extract_state` | 同步 | SSR JSON 提取（摘要 + 预览） |
+| `dom_probe` | 同步（线程池） | DOM 结构 + 列表容器 + 字段选择器候选；**G2 的唯一事实来源** |
+| `draft_assessment` | 同步 | 把 `dom_probe` 结果转成 `ack-assess` 配置（可落盘） |
 | `hunt_api` | 同步（慢） | 全量 JS 找接口 |
 | `health_check` | 同步 | `ack-health` 的 MCP 版 |
 | `prune_profile_cache` | 同步 | 缓存治理 |
@@ -234,6 +236,31 @@ get_job_result(job_id) -> {"result": {...}, "error": ""}
 | `new_platform_onboarding` | 接新平台 |
 | `regression_after_redesign` | 改版回归 |
 | `diagnose_empty_result` | 任务成功但 0 条 |
+
+### 4.4 纯 MCP 勘察链路（v0.14.0）
+
+不碰 shell 的 agent 也能走完「初步勘察」。五个调用，全部结构化返回：
+
+```text
+list_capabilities()
+  → probe_url(url)                     判形态：ssr / spa_shell / captcha_wall ...
+  → dom_probe(url)                     列表容器 + 字段选择器候选（真实 DOM）
+  → draft_assessment(probe, out_dir)   生成 books_assessment.yaml + books_audit.yaml
+  → assess_project(config_path)        返回 job_id
+  → get_job / get_job_result           G0~G4 + Go / No-Go + exit_code
+```
+
+实测（`books.toscrape.com`，2026-11-23）：17 个工具、约 35 秒，
+`conditional_go 85/100`，G0 PASS / G1 WARN / G2 PASS / G3 PASS / G4 WARN，
+与 CLI 跑 `ack assess` 的结论完全一致。
+
+**实现注意：** SpringAI / FastMCP 的同步工具跑在事件循环里，patchright 的
+sync API 会直接抛 `Playwright Sync API inside the asyncio loop`。所以
+`dom_probe` 必须是 async 工具 + `run_in_executor`，不能写成同步工具。
+
+**边界：** `draft_assessment` 只给「选择器事实」和中性字段名（`title` /
+`price` / `stock` / `fieldN`）。字段语义仍要 agent 或人确认；确认后改 YAML
+再跑，不要直接拿自动命名下生产结论。
 
 ---
 

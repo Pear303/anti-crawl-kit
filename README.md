@@ -66,7 +66,7 @@ ack doctor
 
 ```text
 [OK]    Python 3.13.3 (>= 3.10)
-[OK]    anti-crawl-kit 0.13.3
+[OK]    anti-crawl-kit 0.14.0
 [WARN]  patchright 未安装
         browser_* 步骤不可用
         → pip install "anti-crawl-kit[browser]"
@@ -159,6 +159,9 @@ HTTP 侧走 curl_cffi，403/429 先分类再决定要不要开浏览器。签名
 `--baseline auto` 自动和上一次对比，有退化退出码 1，适合 cron 和 CI。
 
 立项阶段可以用 `ack-assess` 走 G0~G4，输出 Go/No-Go 和缺口清单。
+`ack init assess` 能直接从 `ack-dom` 的探测结果生成评估配置和路径审计配置，
+选择器全部来自真实 DOM，不需要手写；MCP 侧对应 `dom_probe` +
+`draft_assessment` + `assess_project`，不碰命令行也能走完一次初步勘察。
 
 ## 命令行
 
@@ -171,6 +174,9 @@ ack doctor --json                 # 给 CI 用的机器可读输出
 ack init recipe
 ack init recipe --type http --out jobs/daily.yaml
 ack init health                   # 等价 ack-health --init
+
+# 从 DOM 探测结果生成 G0~G4 评估配置（选择器来自真实 DOM）
+ack init assess --from-probe output/dom.json --out-dir runs/survey
 
 # 一站式探测：给 URL 和目标字段，直接出结论（URL 换成你的目标站）
 ack-probe --url "https://example.com" --field fansNum --quick

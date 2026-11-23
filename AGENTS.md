@@ -27,6 +27,9 @@
 
 **顺序永远是：JS 包 → HTTP 直连 → SSR 状态 → XHR 拦截 → DOM → 截图 OCR。**
 
+**选择器只能来自 `dom_probe` 的真实输出。** 拿到后 `ack init assess` 生成评估配置，
+再 `ack assess` 出 Go / No-Go；不要先写采集器再补验证。
+
 **L3 不是终点。** 浏览器拦截跑通后，做一次签名剥离测试（`docs/22`）；能导出运行时参数就降回 L1。
 
 **选生产路径前，先过 `docs/23` 的 14 条路径矩阵。** 没测过的路径写“未测”，不能写“不可用”。
@@ -51,6 +54,11 @@ python tools/agent_probe.py --url "URL" --field fansNum \
 
 # 1) 页面探测（框架/接口/选择器）
 python tools/dom_probe.py --url "URL"
+
+# 1.1) 探测结果直接生成评估配置（选择器来自真实 DOM，不手写）
+python tools/dom_probe.py --url "URL" --headless --out output/dom.json
+ack init assess --from-probe output/dom.json --out-dir runs/survey
+ack assess --config runs/survey/<platform>_assessment.yaml
 
 # 2) HTML 空壳 → 从 JS 包找接口（零浏览器）
 python tools/js_api_hunt.py --url "URL" --cookie "k=v" --field fansNum
@@ -110,6 +118,8 @@ src/anti_crawl_kit/
 ├─ datasource.py    数据源分层兜底 + 双跑校验 + 回滚开关
 ├─ content_quality.py 投毒/低质内容检测
 ├─ empty_shell.py   空壳页检测
+├─ assess.py         G0~G4 技术验证（Go / No-Go）
+├─ assess_draft.py   从 DOM 探测结果生成评估配置
 ├─ adaptive_selector.py 改版后重定位元素
 ├─ page_shape.py    页面形态分类
 ├─ state_extract.py SSR 状态 JSON 提取

@@ -3,6 +3,41 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### 计划
+
+- 覆盖率基线统计；ruff 规则逐步扩到常规集合。
+
+## [0.14.0] - 2026-11-23
+
+### 新增
+
+- MCP 新增 `dom_probe`：返回列表容器与字段选择器候选，补齐纯 MCP agent
+  在 G2（数据契约）上的断点。它是 async 工具 + 线程池——FastMCP 的同步
+  工具跑在事件循环里，patchright 的 sync API 会直接报错。
+- MCP 新增 `draft_assessment`：把探测结果转成 `ack-assess` 配置，
+  可只返回 YAML 文本，也可直接落盘。
+- `ack init assess --from-probe <probe.json>`：同一链路的命令行版本，
+  同时生成 `<platform>_assessment.yaml` 与 `<platform>_audit.yaml`。
+- `assess_draft` 模块：从真实 DOM 推导 `item_selector` / `field_selectors`，
+  字段名只做保守猜测（title/url/price/stock），其余用中性名待确认。
+- `serverInfo.version` 改为包版本，不再显示 MCP SDK 的版本号。
+
+### 修复
+
+- MCP 把验证墙（`captcha_wall`）判成 `browser_or_js`，会让 agent 继续开浏览器。
+  现在统一返回 `stop`。
+- `test_mcp_service.py` 的 `test_assess_project_job` 依赖测试执行顺序：
+  `from anti_crawl_kit import assess` 拿到的是同名函数，不是子模块。
+
+### 文档
+
+- `docs/26` 增加 4.4「纯 MCP 勘察链路」与实测记录。
+- `docs/27` 增加 3.0「配置从探测结果生成」。
+- `docs/15` 区分「MCP 做勘察评估 / CLI 做生产执行」，并补 pip 等价入口。
+- `docs/12` 模板 A、`AGENTS.md`、README 中英版同步新链路。
+
 ## [0.13.3] - 2026-11-21
 
 ### 新增
@@ -18,12 +53,6 @@
   `docs/02` 改为「有头 / xvfb / 接受特征」三条路，不再建议靠启动参数规避；
   `ack-detect` 对这条未通过项会直接提示「属预期」。
 - `dev` extras 增加 `mypy>=1.11`。
-
-## [未发布]
-
-### 计划
-
-- 覆盖率基线统计；ruff 规则逐步扩到常规集合。
 
 ## [0.13.2] - 2026-11-21
 

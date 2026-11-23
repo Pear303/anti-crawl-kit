@@ -170,6 +170,17 @@ def _build_parser() -> argparse.ArgumentParser:
     recipe.add_argument("--force", action="store_true", help="覆盖已存在的文件")
 
     sub.add_parser("health", help="生成健康体检模板（等价 ack-health --init）")
+
+    assess = sub.add_parser("assess", help="从 DOM 探测结果生成评估配置")
+    assess.add_argument(
+        "--from-probe", required=True, help="dom_probe / ack-dom --out 生成的 JSON"
+    )
+    assess.add_argument("--out-dir", default="", help="输出目录，默认当前目录")
+    assess.add_argument("--platform", default="", help="平台名，默认从域名推断")
+    assess.add_argument("--item-selector", default="", help="覆盖列表容器选择器")
+    assess.add_argument("--fields", default="", help="逗号分隔，只保留这些字段名")
+    assess.add_argument("--runs", type=int, default=3, help="G3 重复次数")
+    assess.add_argument("--force", action="store_true", help="覆盖已存在的文件")
     return parser
 
 
@@ -210,10 +221,65 @@ def _init_recipe(args: argparse.Namespace) -> int:
     return 0
 
 
+def _init_assess(args: argparse.Namespace) -> int:
+    import json
+
+    from anti_crawl_kit.assess_draft import draft_assessment, write_draft
+
+    probe_path = Path(args.from_probe)
+    try:
+        probe = json.loads(probe_path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        print(f"[FAIL] 读不到探测结果: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+    except json.JSONDecodeError as exc:
+        print(f"[FAIL] 探测结果不是合法 JSON: {exc}", file=sys.stderr)
+        return 2
+
+    fields = [item.strip() for item in (args.fields or "").split(",") if item.strip()]
+    try:
+        result = draft_assessment(
+            probe,
+            platform=args.platform,
+            item_selector=args.item_selector,
+            fields=fields or None,
+            runs=args.runs,
+        )
+    except ValueError as exc:
+        print(f"[FAIL] {exc}", file=sys.stderr)
+        return 2
+
+    out_dir = Path(args.out_dir or ".")
+    target = out_dir / f"{result['platform']}_assessment.yaml"
+    if target.exists() and not args.force:
+        print(f"[WARN] 文件已存在，未覆盖: {target}")
+        print("       要覆盖请加 --force")
+        return 0
+
+    try:
+        paths = write_draft(result, out_dir)
+    except OSError as exc:
+        print(f"[FAIL] 写入失败: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+
+    print(f"[OK] 配置: {paths['config_path']}")
+    if paths.get("audit_path"):
+        print(f"[OK] 审计: {paths['audit_path']}")
+    names = ",".join(f["name"] for f in result["fields"]) or "（无）"
+    print(f"[INFO] item_selector={result['item_selector'] or '（未识别）'}")
+    print(f"[INFO] 字段: {names}")
+    for warning in result["warnings"]:
+        print(f"[WARN] {warning}")
+    print(f"[INFO] 下一步：ack-assess --config \"{paths['config_path']}\"")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if args.kind == "recipe":
         return _init_recipe(args)
+    if args.kind == "assess":
+        return _init_assess(args)
 
     from .health_cli import main as health_main
 
