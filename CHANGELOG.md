@@ -33,6 +33,9 @@
 - `page.py` 的 `wait_until` 用 `cast` 传给驱动（配置是字符串，驱动要 Literal）；
   `get_cookies()` 显式转成 `list[dict]`。
 - `tools/bench.py` 的 `_median` 重复定义合并为一个 `Sequence[float] -> float`。
+  **输出有一处可见变化**：`_aggregate` 的 `elapsed_ms` / `bytes` / `items` 在调用处
+  `int()` 回退，bench 表格与终端汇总从浮点变成整数——这与 `BenchResult` 的字段
+  声明一致；原来是后定义的 float 版覆盖了 int 版，属于隐式行为。
 - `data_contract.py` 用 `isinstance(value, Sized)` 替代 `hasattr("__len__")`。
 - `adaptive_selector.py` 的父节点判断改用 `parent is not None`，让类型窄化生效；
   去重不再依赖 `set.add()` 的返回值。

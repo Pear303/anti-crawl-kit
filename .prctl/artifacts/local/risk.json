@@ -18,6 +18,55 @@
       ]
     },
     {
+      "file": ".prctl/artifacts/local/approvals.json",
+      "level": "low",
+      "patterns": [
+        ".prctl/artifacts/**"
+      ]
+    },
+    {
+      "file": ".prctl/artifacts/local/evidence.json",
+      "level": "low",
+      "patterns": [
+        ".prctl/artifacts/**"
+      ]
+    },
+    {
+      "file": ".prctl/artifacts/local/release.json",
+      "level": "low",
+      "patterns": [
+        ".prctl/artifacts/**"
+      ]
+    },
+    {
+      "file": ".prctl/artifacts/local/review-1.json",
+      "level": "low",
+      "patterns": [
+        ".prctl/artifacts/**"
+      ]
+    },
+    {
+      "file": ".prctl/artifacts/local/review-2.json",
+      "level": "low",
+      "patterns": [
+        ".prctl/artifacts/**"
+      ]
+    },
+    {
+      "file": ".prctl/artifacts/local/risk.json",
+      "level": "low",
+      "patterns": [
+        ".prctl/artifacts/**"
+      ]
+    },
+    {
+      "file": ".prctl/artifacts/local/security.json",
+      "level": "low",
+      "patterns": [
+        ".prctl/artifacts/**"
+      ]
+    },
+    {
       "file": "AGENTS.md",
       "level": "low",
       "patterns": [
@@ -54,6 +103,11 @@
     },
     {
       "file": "pyproject.toml",
+      "level": "medium",
+      "patterns": []
+    },
+    {
+      "file": "requirements.txt",
       "level": "medium",
       "patterns": []
     },
@@ -141,6 +195,20 @@
       "file": "src/anti_crawl_kit/ui.py",
       "level": "medium",
       "patterns": []
+    },
+    {
+      "file": "tests/test_data_contract.py",
+      "level": "low",
+      "patterns": [
+        "tests/**"
+      ]
+    },
+    {
+      "file": "tests/test_page_navigation.py",
+      "level": "low",
+      "patterns": [
+        "tests/**"
+      ]
     }
   ]
 }

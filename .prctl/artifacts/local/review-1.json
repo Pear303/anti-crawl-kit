@@ -1,0 +1,57 @@
+{
+  "pr": "local",
+  "round": 1,
+  "context": "fresh",
+  "conclusion": "pass",
+  "findings": [
+    {
+      "id": "R-001",
+      "severity": "P2",
+      "category": "impact",
+      "file": "src/anti_crawl_kit/tools/bench.py",
+      "line": 262,
+      "problem": "合并后的 _median 在 _aggregate 三个字段上加 int()，与 origin/main 的实际运行结果并不完全等价：偶数次采样且中位数为 .5 时被截断。",
+      "evidence": "差分：rows[(10,100,1),(11,101,2)] 在 HEAD 得 (10,100,1)、base 得 (10.5,100.5,1.5)；影响面仅 _markdown 表格与终端汇总，results.json 与 _assert_baseline 不受影响。",
+      "disposition": "explained",
+      "disposition_note": "结果符合 BenchResult.elapsed_ms/bytes/items: int 的声明，也与被覆盖前 int 版 _median 的截断语义一致；已在 CHANGELOG 写明「bench 表格从浮点变整数」这一可见变化。"
+    },
+    {
+      "id": "R-002",
+      "severity": "P2",
+      "category": "compatibility",
+      "file": "src/anti_crawl_kit/report.py",
+      "line": 160,
+      "problem": "meta.recommendation 的取值从 `x or {}` 改为 isinstance(x, Mapping) 判定：非空的非映射值原先抛 AttributeError，现在静默降级为 {}。",
+      "evidence": "差分：{'meta':{'recommendation':'draft text'}} 在 base 抛 AttributeError，在 HEAD 正常出报告但没有 recommendation 段；合法输入下 30 次比对输出完全一致（Recommendation.to_dict() 恒返回 dict）。",
+      "disposition": "explained",
+      "disposition_note": "与同文件既有的 meta/summary 防御式写法保持一致：报告渲染器不因一条脏数据打不开，优先级高于对非法输入的显式报错。"
+    },
+    {
+      "id": "R-003",
+      "severity": "P2",
+      "category": "goal",
+      "file": "src/anti_crawl_kit/page.py",
+      "line": 117,
+      "problem": "page.goto/reload 用 cast(Any, wait_until) 关掉了驱动对 Literal 的校验，公共方法传错值不再被 mypy 拦截。",
+      "evidence": "仅还原两处 cast 后 mypy 立刻复现 page.py:117/121 两条 arg-type。",
+      "disposition": "fixed",
+      "disposition_note": "已在 59e4568 补运行时白名单：非法 wait_until 在 goto 入口 raise ValueError，不进重试；新增 test_unknown_wait_until_fails_fast_without_retry 断言驱动未被调用。"
+    },
+    {
+      "id": "R-004",
+      "severity": "P2",
+      "category": "goal",
+      "file": ".github/workflows/ci.yml",
+      "line": 44,
+      "problem": "typecheck 改为阻塞，但该 job 只安装 .[dev]，环境里没有 patchright，浏览器层类型整体退化为 Any。",
+      "evidence": "同一份 HEAD 删掉两处 cast 后：装齐依赖时 mypy 报 2 个 arg-type，--no-site-packages 模拟该 job 时报 0 错误。",
+      "disposition": "fixed",
+      "disposition_note": "已在 59e4568 改为 pip install -e \".[all,dev]\"，并用 mypy>=1.11,<3 固定大版本，避免以后升级把 PR 全部打红。"
+    }
+  ],
+  "filtered": {
+    "style": 3,
+    "redundancy": 2,
+    "other": 1
+  }
+}
