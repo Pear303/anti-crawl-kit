@@ -276,7 +276,7 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 
 ```bash
 python -m ruff check .                              # 含 examples / scripts
-python -m pytest -q                                 # 663 passed / 2 skipped
+python -m pytest -q                                 # 664 passed / 2 skipped
 python -m pytest -q --cov --cov-fail-under=68       # 本地 72%，CI 门槛 68%
 ```
 

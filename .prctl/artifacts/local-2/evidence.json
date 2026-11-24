@@ -16,7 +16,7 @@
     {
       "criterion": "pytest 全绿且数量不低于改动前",
       "result": "PASS",
-      "evidence": "python -m pytest -q -> 656 passed, 2 skipped（改动前 520 passed / 2 skipped）；2 个 skip 是 ACK_BROWSER=1 才跑的浏览器用例"
+      "evidence": "python -m pytest -q -> 664 passed, 2 skipped（改动前 520 passed / 2 skipped）；2 个 skip 是 ACK_BROWSER=1 才跑的浏览器用例"
     },
     {
       "criterion": "总覆盖率不低于 70%，且 CI 会阻塞",
@@ -49,6 +49,11 @@
       "evidence": "ClientSession 连接 python -m anti_crawl_kit.mcp_server -> serverInfo.version=0.15.0，tool_count=17"
     },
     {
+      "criterion": "门禁规则不能被同一个 PR 改弱",
+      "result": "PASS",
+      "evidence": ".prctl/policy.yml 与 .prctl/schemas/** 判 high（2 审批）；gate workflow 检测到规则改动时用 base 分支 policy 复核，锚点放 $RUNNER_TEMP；.prctl/artifacts/** 判 low（0 审批）"
+    },
+    {
       "criterion": "可以构建 sdist",
       "result": "PASS",
       "evidence": "python -m build --sdist -> Successfully built anti_crawl_kit-0.15.0.tar.gz"
@@ -61,7 +66,7 @@
     },
     {
       "command": "python -m pytest -q",
-      "output": "656 passed, 2 skipped in 5.40s"
+      "output": "664 passed, 2 skipped in 6.67s"
     },
     {
       "command": "python -m pytest -q --cov --cov-report=term",

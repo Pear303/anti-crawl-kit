@@ -42,8 +42,11 @@
   `field_spec`，不再遮蔽 `dataclasses.field`。
 - `tools/doctor.py` 删除 `sys.version_info >= (3, 10)` 的恒真分支
   （`requires-python` 已在安装阶段保证）。
-- 门禁规则不能在同一 PR 里被改弱：`.prctl/**` 列为 high，CI 检测到改动
-  门禁自身时，会用 base 分支的 policy 重新分级并 gate。
+- 门禁规则不能在同一 PR 里被改弱：`.prctl/policy.yml` 与 `.prctl/schemas/**`
+  列为 high；CI 检测到改动门禁规则时，会用 base 分支的 policy 重新分级并 gate，
+  锚点放在 `$RUNNER_TEMP` 并用显式开关判断，不看工作区文件是否存在。
+- `.prctl/artifacts/**` 归 low：证据产物每个 PR 都会提交，算 high 会让高风险
+  这个信号失去区分度。
 - 风险分级改用 `core.quotepath=false` 输出路径：中文文件名不再被八进制
   转义，否则 `.github/workflows/**` 这类规则会匹配失败、高风险被降级。
 
