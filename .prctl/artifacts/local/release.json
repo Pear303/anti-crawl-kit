@@ -1,7 +1,7 @@
 {
   "pr": "local",
   "release_type": "library",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "rollout": [
     {
       "stage": "github-release",
@@ -16,15 +16,15 @@
   ],
   "rollback": {
     "steps": [
-      "删除远端 tag：git push --delete origin v0.15.0",
-      "revert 本 PR 的提交（de35d5b / 96ee027 及后续审核修复提交）",
-      "重新发布 0.14.0 的 wheel 与 sdist"
+      "删除远端 tag：git push --delete origin v0.15.1",
+      "git revert 438d1c1",
+      "重新发布 0.15.0 的 wheel 与 sdist"
     ],
-    "verification": "在 revert 后的提交上跑 python -m pytest -q，确认 653 passed / 2 skipped"
+    "verification": "在 revert 后的提交上跑 python -m mypy src/anti_crawl_kit（应回到 143 errors）与 python -m pytest -q（应仍是 667 passed）"
   },
   "monitoring": [
-    "GitHub Actions 的 lint / offline / with-deps / coverage / windows 全绿",
-    "issue tracker 里 0.15.0 的安装与升级反馈",
+    "GitHub Actions 的 lint / typecheck / offline / with-deps / coverage / windows 全绿",
+    "issue tracker 里 0.15.1 的安装反馈",
     "下游 import smoke：python -c \"import anti_crawl_kit; print(anti_crawl_kit.__version__)\""
   ]
 }

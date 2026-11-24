@@ -27,9 +27,9 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping, Sized
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 _TYPES = {"string", "int", "float", "bool", "list", "dict", "any"}
 
@@ -210,14 +210,21 @@ def validate_data(
                         }
                     )
                 continue
-            if isinstance(value, Sized) and spec.min_len and len(value) < spec.min_len:
-                if len(type_errors) < 20:
+            if spec.min_len and hasattr(value, "__len__"):
+                # hasattr 保留原语义（int/None 不做长度检查）；
+                # 动态 __getattr__ 提供 __len__ 的对象会让 len() 抛 TypeError，
+                # 这种脏值跳过校验，不让整批数据崩掉
+                try:
+                    length: int | None = len(cast(Any, value))
+                except TypeError:
+                    length = None
+                if length is not None and length < spec.min_len and len(type_errors) < 20:
                     type_errors.append(
                         {
                             "index": index,
                             "field": spec.name,
                             "expected": f"len>={spec.min_len}",
-                            "actual": len(value),
+                            "actual": length,
                         }
                     )
             pattern = patterns.get(spec.name)

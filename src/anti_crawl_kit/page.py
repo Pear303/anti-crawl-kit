@@ -60,6 +60,9 @@ class PageAdapter:
         return True
 
     # ── 导航 ────────────────────────────────────────
+    # 驱动只接受这几个枚举值；配置写错时立即失败，不进重试循环
+    _WAIT_UNTIL_VALUES = frozenset({"commit", "domcontentloaded", "load", "networkidle"})
+
     def goto(
         self,
         url: str,
@@ -95,6 +98,12 @@ class PageAdapter:
                 slow_load_ms = int(os.environ.get("AC_KIT_SLOW_LOAD_MS", "15000") or 15000)
             except ValueError:
                 slow_load_ms = 15000
+
+        if wait_until not in self._WAIT_UNTIL_VALUES:
+            raise ValueError(
+                f"不支持的 wait_until: {wait_until!r}；"
+                f"可选值: {', '.join(sorted(self._WAIT_UNTIL_VALUES))}"
+            )
 
         self.last_nav_metrics = {
             "url": url,
@@ -311,7 +320,11 @@ class PageAdapter:
                 pass
 
     # ── Cookie / 请求 ───────────────────────────────
-    def get_cookies(self) -> list[dict]:
+    def get_cookies(self) -> list[dict[str, Any]]:
+        """当前上下文的 Cookie（普通 dict，字段与驱动返回一致）。
+
+        仅供进程内传递，不要直接落盘或上报——里面是真实登录态。
+        """
         return [dict(cookie) for cookie in self._driver.context.cookies()]
 
     def api_request(self, url: str, headers: dict | None = None, timeout: int = 10000) -> dict:

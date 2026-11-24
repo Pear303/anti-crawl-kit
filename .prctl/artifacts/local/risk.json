@@ -3,11 +3,6 @@
   "approvals": 2,
   "matched": [
     {
-      "file": ".github/CODEOWNERS",
-      "level": "medium",
-      "patterns": []
-    },
-    {
       "file": ".github/pull_request_template.md",
       "level": "low",
       "patterns": [
@@ -20,158 +15,6 @@
       "level": "high",
       "patterns": [
         ".github/workflows/**"
-      ]
-    },
-    {
-      "file": ".github/workflows/prctl-gate.yml",
-      "level": "high",
-      "patterns": [
-        ".github/workflows/**"
-      ]
-    },
-    {
-      "file": ".github/workflows/prctl-risk.yml",
-      "level": "high",
-      "patterns": [
-        ".github/workflows/**"
-      ]
-    },
-    {
-      "file": ".gitignore",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": ".prctl/artifacts/local-1/approvals.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-1/evidence.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-1/release.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-1/review-1.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-1/review-2.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-1/risk.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-1/security.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-2/evidence.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-2/release.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-2/review-1.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-2/review-2.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-2/risk.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/artifacts/local-2/security.json",
-      "level": "low",
-      "patterns": [
-        ".prctl/artifacts/**"
-      ]
-    },
-    {
-      "file": ".prctl/policy.yml",
-      "level": "high",
-      "patterns": [
-        ".prctl/policy.yml"
-      ]
-    },
-    {
-      "file": ".prctl/schemas/evidence.schema.json",
-      "level": "high",
-      "patterns": [
-        ".prctl/schemas/**"
-      ]
-    },
-    {
-      "file": ".prctl/schemas/release.schema.json",
-      "level": "high",
-      "patterns": [
-        ".prctl/schemas/**"
-      ]
-    },
-    {
-      "file": ".prctl/schemas/review.schema.json",
-      "level": "high",
-      "patterns": [
-        ".prctl/schemas/**"
-      ]
-    },
-    {
-      "file": ".prctl/schemas/risk.schema.json",
-      "level": "high",
-      "patterns": [
-        ".prctl/schemas/**"
-      ]
-    },
-    {
-      "file": ".prctl/schemas/security.schema.json",
-      "level": "high",
-      "patterns": [
-        ".prctl/schemas/**"
       ]
     },
     {
@@ -210,255 +53,9 @@
       ]
     },
     {
-      "file": "docs/30-发布流程.md",
-      "level": "low",
-      "patterns": [
-        "docs/**",
-        "*.md",
-        "**/*.md"
-      ]
-    },
-    {
-      "file": "examples/08_logged_in_encrypted.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "examples/12_datasource_fallback.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "examples/13_content_quality.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "prctl/.gitignore",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/README.md",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/examples/evidence.example.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/examples/release.example.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/examples/release.library.example.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/examples/review.example.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/examples/risk.example.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/examples/security.example.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/__init__.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/__main__.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/assets/policy.yml",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/assets/schemas/evidence.schema.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/assets/schemas/release.schema.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/assets/schemas/review.schema.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/assets/schemas/risk.schema.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/assets/schemas/security.schema.json",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/cli.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/gate.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/policy.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/risk.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/prctl/validate.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/pyproject.toml",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/tests/conftest.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/tests/test_cli.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/tests/test_evidence.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/tests/test_gate.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/tests/test_release.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/tests/test_review.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/tests/test_risk.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
-      "file": "prctl/tests/test_security.py",
-      "level": "high",
-      "patterns": [
-        "prctl/**"
-      ]
-    },
-    {
       "file": "pyproject.toml",
       "level": "medium",
       "patterns": []
-    },
-    {
-      "file": "requirements.txt",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "scripts/gen_requirements.py",
-      "level": "high",
-      "patterns": [
-        "scripts/**"
-      ]
     },
     {
       "file": "src/anti_crawl_kit/__init__.py",
@@ -471,27 +68,7 @@
       "patterns": []
     },
     {
-      "file": "src/anti_crawl_kit/assess.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/assess_draft.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
       "file": "src/anti_crawl_kit/browser_pool.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/captcha.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/challenge.py",
       "level": "medium",
       "patterns": []
     },
@@ -501,22 +78,7 @@
       "patterns": []
     },
     {
-      "file": "src/anti_crawl_kit/content_quality.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
       "file": "src/anti_crawl_kit/data_contract.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/datasource.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/dom_extract.py",
       "level": "medium",
       "patterns": []
     },
@@ -526,47 +88,12 @@
       "patterns": []
     },
     {
-      "file": "src/anti_crawl_kit/health.py",
+      "file": "src/anti_crawl_kit/http.py",
       "level": "medium",
       "patterns": []
     },
     {
-      "file": "src/anti_crawl_kit/http_signed.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/js_bundle.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/loadmore.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/login.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/mcp_server.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/notify.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/platform_spec.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/profile_cache.py",
+      "file": "src/anti_crawl_kit/page.py",
       "level": "medium",
       "patterns": []
     },
@@ -586,26 +113,6 @@
       "patterns": []
     },
     {
-      "file": "src/anti_crawl_kit/resources.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/risk.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/run_report.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/runs.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
       "file": "src/anti_crawl_kit/session.py",
       "level": "medium",
       "patterns": []
@@ -616,52 +123,7 @@
       "patterns": []
     },
     {
-      "file": "src/anti_crawl_kit/stability.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/stealth.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/strategy.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/text.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/tools/agent_probe.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
       "file": "src/anti_crawl_kit/tools/bench.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/tools/doctor.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/tools/health_cli.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/tools/init_cli.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/tools/js_api_hunt.py",
       "level": "medium",
       "patterns": []
     },
@@ -671,12 +133,7 @@
       "patterns": []
     },
     {
-      "file": "src/anti_crawl_kit/tools/report_cli.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/tools/smoke_cli.py",
+      "file": "src/anti_crawl_kit/tools/recipe_cli.py",
       "level": "medium",
       "patterns": []
     },
@@ -684,149 +141,6 @@
       "file": "src/anti_crawl_kit/ui.py",
       "level": "medium",
       "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/ui_assets.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "src/anti_crawl_kit/waiting.py",
-      "level": "medium",
-      "patterns": []
-    },
-    {
-      "file": "tests/test_ack_cli.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_agent_probe.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_alive.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_captcha.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_challenge_js.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_guard.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_headers.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_health.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_init_cli.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_mcp_service.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_profile_cache.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_repo_consistency.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_report_assets.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_report_diff.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_resources.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_risk.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_strategy.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_text.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
-    },
-    {
-      "file": "tests/test_user_agent.py",
-      "level": "low",
-      "patterns": [
-        "tests/**"
-      ]
     }
   ]
 }

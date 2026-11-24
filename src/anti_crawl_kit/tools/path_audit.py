@@ -1712,7 +1712,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-items", type=int, default=0, help="覆盖配置里的 max_items")
     args = parser.parse_args(argv)
 
-    _reconfigure = getattr(sys.stdout, "reconfigure", None)
+    try:
+        _reconfigure = getattr(sys.stdout, "reconfigure", None)
+    except Exception:
+        _reconfigure = None
     if callable(_reconfigure):
         try:
             _reconfigure(encoding="utf-8")

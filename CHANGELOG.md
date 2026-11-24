@@ -37,6 +37,12 @@
 - `adaptive_selector.py` 的父节点判断改用 `parent is not None`，让类型窄化生效；
   去重不再依赖 `set.add()` 的返回值。
 - `console.py` 删除两处已被 mypy 判定为无用的 `type: ignore`。
+- `PageAdapter.goto` 增加 `wait_until` 白名单：配置写错时立刻 `ValueError`，
+  不再进 3 次重试（原来要白等约 6 秒）。
+- `data_contract` 的长度校验保留「没有 `__len__` 就跳过」的语义，同时容忍
+  动态 `__getattr__` 提供的 `__len__`，脏值不会让整批校验抛 `TypeError`。
+- `dev` 依赖的 mypy 加上界（`<3`），CI 的 typecheck 改为装 `.[all,dev]`，
+  让可选依赖的存根参与检查，避免以后 mypy 大版本升级把 PR 全部打红。
 
 ## [0.15.0] - 2026-11-24
 
