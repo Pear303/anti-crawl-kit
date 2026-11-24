@@ -7,7 +7,44 @@
 
 ### 计划
 
-- 覆盖率基线统计；ruff 规则逐步扩到常规集合。
+- mypy 错误从 143 个逐步清零。
+
+## [0.15.0] - 2026-11-24
+
+### 新增
+
+- 覆盖率门槛：CI 新增 `coverage` job，`--cov-fail-under=70`；当前基线 71.6%
+  （9890 条语句）。`dev` extras 增加 `pytest-cov`。
+- `ack init health --out <路径>`：与 `ack init recipe|assess` 对齐，可指定输出
+  位置，已存在的文件默认不覆盖。
+- PR 门禁落地（`prctl`）：`.prctl/policy.yml`、五个 JSON Schema、
+  `.github/pull_request_template.md`、`.github/CODEOWNERS`、
+  `prctl-gate` / `prctl-risk` 工作流。高风险改动需要 2 次独立复核。
+- 8 个模块补齐离线测试：`resources`、`headers`、`strategy`、`risk`、`alive`、
+  `captcha`、`guard`、`user_agent`；`text` 补水印清洗、文件名安全、去重键。
+
+### 变更
+
+- ruff 规则从「只查运行错误」扩到常规集合 `E / F / W / I / UP / B`：
+  自动修复 112 处，另外手工处理 74 处（66 处长行折行、8 处语义问题）。
+  `ui_assets.py` 是唯一豁免 `E501` 的文件——它只放内嵌 HTML/CSS/JS。
+- `report.py` 的样式表移入 `ui_assets.py`（`REPORT_CSS`），报告与 UI 的内嵌
+  资源集中到一个模块，职责更清楚。
+- `captcha.py` / `challenge.py` 的 JS 模板从 `%` 格式化改成具名占位符 +
+  `.replace()`；`notify.py` 的 PowerShell 脚本改成 f-string 注入命名空间，
+  长行不再需要例外。
+- `ack init health` 现在会打印真实生成路径，而不是固定示例名。
+
+### 修复
+
+- `generic.py` 删除未使用的 `fields_payload`；循环变量 `field` 改名
+  `field_spec`，不再遮蔽 `dataclasses.field`。
+- `tools/doctor.py` 删除 `sys.version_info >= (3, 10)` 的恒真分支
+  （`requires-python` 已在安装阶段保证）。
+
+### 文档
+
+- 新增 `CONTRIBUTING.md`：本地门禁、证据包、审核轮次与风险分级。
 
 ## [0.14.0] - 2026-11-23
 

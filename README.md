@@ -66,7 +66,7 @@ ack doctor
 
 ```text
 [OK]    Python 3.13.3 (>= 3.10)
-[OK]    anti-crawl-kit 0.14.0
+[OK]    anti-crawl-kit 0.15.0
 [WARN]  patchright 未安装
         browser_* 步骤不可用
         → pip install "anti-crawl-kit[browser]"
@@ -269,6 +269,21 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 - 判断窗口关没关不要用 `destroyed`，导航期间 evaluate 会抛异常，得用探针。
 
 其余的在 [docs/11-工程红线与验收清单.md](docs/11-工程红线与验收清单.md)。
+
+## 质量门禁
+
+改动合并前要过三道机器检查：
+
+```bash
+python -m ruff check src tests                      # E / F / W / I / UP / B
+python -m pytest -q                                 # 653 passed / 2 skipped
+python -m pytest -q --cov --cov-fail-under=70       # 当前 71.6%
+```
+
+PR 还要过 `prctl gate`（证据包 / 审核报告 / 安全报告 / 风险审批 / 发布计划）。
+高风险路径（发版流程、门禁自身）需要 2 次全新上下文的独立复核。
+
+流程细节见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 文档
 

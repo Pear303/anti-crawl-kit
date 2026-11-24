@@ -250,10 +250,26 @@ agent 手写能解决就手写，但不要裸 `requests`。
 | **库** | `AntiRiskHttpClient`、`ChallengeGate`、`Notifier` | **必须**：补的是手写容易漏、漏了会出事的东西 |
 | **探测工具** | `agent_probe`、`js_api_hunt`、`dom_probe` | **可选**：加速器，agent 手写也行 |
 | **固化脚本** | `scripts/*.py`、`platforms/*.yaml`、`path_audit` 配置 | **必须**：生产环境不能每次让 LLM 现场生成 |
-| **MCP 接入** | `ack-mcp`（15 tools / 3 prompts / 4 resources） | **可选**：给非工程 agent 用；coding agent 读本文件即可 |
+| **MCP 接入** | `ack-mcp`（17 tools / 3 prompts / 4 resources） | **可选**：给非工程 agent 用；coding agent 读本文件即可 |
 | **立项评估** | `ack-assess`（G0~G4 + Go/No-Go） | **必须**：决定做不做、缺口在哪 |
 | **结果展示** | `ack-report`（单文件 HTML）、`ack-ui`（本地控制台） | **可选**：给人看结论、跑 recipe，不替代判断 |
 | **结果对比** | `ack-report --baseline [auto\|JSON]`、`ack-recipe --baseline auto` | **可选**：看趋势和退化，适合每日监控 / CI |
+
+### 提交与发布门禁
+
+改这个仓库本身时，走这套流程（规范见 `CONTRIBUTING.md`）：
+
+```bash
+python -m ruff check src tests                      # E / F / W / I / UP / B
+python -m pytest -q                                 # 653 passed / 2 skipped
+python -m pytest -q --cov --cov-fail-under=70       # 当前 71.6%
+prctl gate --pr <编号>                               # 证据 / 审核 / 安全 / 风险 / 发布
+```
+
+- **写代码的 agent 不审自己的代码。** Reviewer 必须换全新上下文，只看目标、diff 和验收标准。
+- **没有运行证据不进审核。** `evidence.json` 里要有命令、输出、逐条验收结果。
+- **审核最多 3 轮**，第 2 轮起只审增量；每条意见必须有处置。
+- 高风险路径（`.github/workflows/**`、`prctl/**`、`scripts/**`）需要 2 次独立复核。
 
 ---
 

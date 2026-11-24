@@ -1,0 +1,30 @@
+{
+  "pr": "local-2",
+  "release_type": "library",
+  "version": "0.15.0",
+  "rollout": [
+    {
+      "stage": "github-release",
+      "percentage": 100,
+      "soak_hours": 0
+    },
+    {
+      "stage": "pypi",
+      "percentage": 100,
+      "soak_hours": 168
+    }
+  ],
+  "rollback": {
+    "steps": [
+      "删除远端 tag：git push --delete origin v0.15.0",
+      "revert 本 PR 的提交（de35d5b / 96ee027 及后续审核修复提交）",
+      "重新发布 0.14.0 的 wheel 与 sdist"
+    ],
+    "verification": "在 revert 后的提交上跑 python -m pytest -q，确认 653 passed / 2 skipped"
+  },
+  "monitoring": [
+    "GitHub Actions 的 lint / offline / with-deps / coverage / windows 全绿",
+    "issue tracker 里 0.15.0 的安装与升级反馈",
+    "下游 import smoke：python -c \"import anti_crawl_kit; print(anti_crawl_kit.__version__)\""
+  ]
+}
