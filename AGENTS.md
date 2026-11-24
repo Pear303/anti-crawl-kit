@@ -262,6 +262,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 ```bash
 python -m ruff check .                              # 含 examples / scripts
 cd prctl && python -m ruff check . && cd ..
+python -m mypy src/anti_crawl_kit                    # 0 错误，阻塞
 python -m pytest -q                                 # 667 passed / 2 skipped
 python -m pytest -q --cov --cov-fail-under=68       # 本地 72%，CI 门槛 68%
 prctl gate --pr <编号>                               # 证据 / 审核 / 安全 / 风险 / 发布

@@ -27,7 +27,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sized
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -210,7 +210,7 @@ def validate_data(
                         }
                     )
                 continue
-            if spec.min_len and hasattr(value, "__len__") and len(value) < spec.min_len:
+            if isinstance(value, Sized) and spec.min_len and len(value) < spec.min_len:
                 if len(type_errors) < 20:
                     type_errors.append(
                         {

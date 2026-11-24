@@ -231,34 +231,36 @@ def diff_reports(
     added = 0
     removed = 0
     for key in sorted(dict.fromkeys([*before_items.keys(), *after_items.keys()])):
-        before = before_items.get(key)
-        after = after_items.get(key)
-        if before is None:
+        before_item = before_items.get(key)
+        after_item = after_items.get(key)
+        if before_item is None:
+            if after_item is None:
+                continue
             added += 1
             items.append(
                 {
                     "key": key,
-                    "label": after[0],
+                    "label": after_item[0],
                     "before": "-",
-                    "after": after[1],
+                    "after": after_item[1],
                     "change": "added",
                 }
             )
             continue
-        if after is None:
+        if after_item is None:
             removed += 1
             regressions += 1
             items.append(
                 {
                     "key": key,
-                    "label": before[0],
-                    "before": before[1],
+                    "label": before_item[0],
+                    "before": before_item[1],
                     "after": "-",
                     "change": "removed",
                 }
             )
             continue
-        change = _status_change(before[1], after[1])
+        change = _status_change(before_item[1], after_item[1])
         if change == "regressed":
             regressions += 1
         elif change == "improved":
@@ -266,9 +268,9 @@ def diff_reports(
         items.append(
             {
                 "key": key,
-                "label": after[0],
-                "before": before[1],
-                "after": after[1],
+                "label": after_item[0],
+                "before": before_item[1],
+                "after": after_item[1],
                 "change": change,
             }
         )
@@ -283,11 +285,11 @@ def diff_reports(
     }
     metrics = []
     for key in dict.fromkeys([*before_metrics.keys(), *after_metrics.keys()]):
-        before = before_metrics.get(key)
-        after = after_metrics.get(key)
-        if before is None or after is None:
+        before_metric = before_metrics.get(key)
+        after_metric = after_metrics.get(key)
+        if before_metric is None or after_metric is None:
             continue
-        change = _metric_change(before[1], after[1], after[2])
+        change = _metric_change(before_metric[1], after_metric[1], after_metric[2])
         if change == "regressed":
             regressions += 1
         elif change == "improved":
@@ -295,9 +297,9 @@ def diff_reports(
         metrics.append(
             {
                 "key": key,
-                "label": after[0],
-                "before": before[1],
-                "after": after[1],
+                "label": after_metric[0],
+                "before": before_metric[1],
+                "after": after_metric[1],
                 "change": change,
             }
         )

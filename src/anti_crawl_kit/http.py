@@ -60,7 +60,7 @@ class AntiRiskHttpClient:
         self.max_retries = max_retries
         self.proxy = proxy
         self.headers = {**self._default_headers(), **(headers or {})}
-        self._session = requests.Session()
+        self._session: Any = requests.Session()
 
     def get_json(
         self,

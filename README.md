@@ -66,7 +66,7 @@ ack doctor
 
 ```text
 [OK]    Python 3.13.3 (>= 3.10)
-[OK]    anti-crawl-kit 0.15.0
+[OK]    anti-crawl-kit 0.15.1
 [WARN]  patchright 未安装
         browser_* 步骤不可用
         → pip install "anti-crawl-kit[browser]"
@@ -276,6 +276,7 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 
 ```bash
 python -m ruff check .                              # 含 examples / scripts
+python -m mypy src/anti_crawl_kit                    # 0 错误，阻塞
 python -m pytest -q                                 # 667 passed / 2 skipped
 python -m pytest -q --cov --cov-fail-under=68       # 本地 72%，CI 门槛 68%
 ```

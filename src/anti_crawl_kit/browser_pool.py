@@ -176,7 +176,7 @@ class BrowserPool:
 
     def stats(self) -> dict[str, Any]:
         with self._lock:
-            data = self._stats.to_dict()
+            data: dict[str, Any] = dict(self._stats.to_dict())
         data.update(
             {
                 "max_sessions": self.max_sessions,

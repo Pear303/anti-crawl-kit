@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:  # 仅在类型检查时导入，未装 patchright 也能 import 本模块
     from patchright.sync_api import Page as PlaywrightPage
@@ -114,11 +114,11 @@ class PageAdapter:
             try:
                 if attempt == 0:
                     response = self._driver.goto(
-                        url, wait_until=wait_until, timeout=timeout
+                        url, wait_until=cast(Any, wait_until), timeout=timeout
                     )
                 else:
                     response = self._driver.reload(
-                        wait_until=wait_until, timeout=timeout
+                        wait_until=cast(Any, wait_until), timeout=timeout
                     )
                 elapsed_ms = int((time.perf_counter() - started) * 1000)
                 self.last_nav_metrics.update(attempts=attempt + 1, goto_ms=elapsed_ms)
@@ -312,7 +312,7 @@ class PageAdapter:
 
     # ── Cookie / 请求 ───────────────────────────────
     def get_cookies(self) -> list[dict]:
-        return self._driver.context.cookies()
+        return [dict(cookie) for cookie in self._driver.context.cookies()]
 
     def api_request(self, url: str, headers: dict | None = None, timeout: int = 10000) -> dict:
         """通过 Playwright 原生请求 API 发请求（自动携带浏览器 cookie）。"""

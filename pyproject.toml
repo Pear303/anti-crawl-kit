@@ -99,7 +99,9 @@ select = ["E", "F", "W", "I", "UP", "B", "RUF100"]
 "src/anti_crawl_kit/ui_assets.py" = ["E501"]
 
 [tool.mypy]
-python_version = "3.10"
+# 类型检查用 3.11 口径：StrEnum 等 3.11 才进 typeshed 的 API 需要它。
+# 运行时兼容 3.10 由 CI 的 3.10 测试矩阵保证，不靠 mypy 兜底。
+python_version = "3.11"
 warn_unused_ignores = true
 ignore_missing_imports = true
 exclude = ["tests/", "examples/"]
