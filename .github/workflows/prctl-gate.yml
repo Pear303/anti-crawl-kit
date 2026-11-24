@@ -2,6 +2,11 @@ name: prctl-gate
 
 # 总门禁：证据 / 审核 / 安全 / 风险 / 发布五项齐全才放行。
 # 规则来源是 .prctl/policy.yml，不是 workflow 里的硬编码。
+#
+# 两个安全约束：
+# 1. `core.quotepath=false`：中文文件名不加引号/八进制转义，否则路径规则匹配不到。
+# 2. 如果 PR 改了门禁自身（.prctl/、prctl/、workflows），用 base 分支的 policy
+#    重新分级并 gate，防止「同一个 PR 把规则改弱再自我放行」。
 
 on:
   pull_request:
@@ -35,7 +40,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           git fetch origin "$BASE_REF"
-          git diff --name-only "origin/$BASE_REF...HEAD" > changed.txt
+          git -c core.quotepath=false diff --name-only "origin/$BASE_REF...HEAD" > changed.txt
           prctl risk --pr "$PR_NUMBER" --files-from changed.txt
       - name: Count approvals
         id: approvals
@@ -46,11 +51,43 @@ jobs:
           COUNT=$(gh pr view "${{ github.event.pull_request.number }}" --json reviews \
             --jq '[.reviews | group_by(.author.login)[] | last | select(.state=="APPROVED")] | length')
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+      - name: Detect gate self-modification
+        id: selfmod
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if grep -qE '^(\.prctl/|prctl/|\.github/workflows/)' changed.txt; then
+            if git cat-file -e "origin/$BASE_REF:.prctl/policy.yml" 2>/dev/null; then
+              git show "origin/$BASE_REF:.prctl/policy.yml" > base-policy.yml
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              echo "PR 修改了门禁自身，将用 base 分支的 policy 复核。"
+            else
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              echo "base 分支还没有 policy，跳过历史规则复核。"
+            fi
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Re-classify with base policy
+        if: github.event_name == 'pull_request' && steps.selfmod.outputs.changed == 'true'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          prctl risk --pr "$PR_NUMBER" --files-from changed.txt --policy base-policy.yml
       - name: Run prctl gate
         if: github.event_name == 'pull_request'
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          prctl gate --pr "${{ github.event.pull_request.number }}" \
-            --approvals "${{ steps.approvals.outputs.count }}"
+          if [ -f base-policy.yml ]; then
+            prctl gate --pr "$PR_NUMBER" \
+              --approvals "${{ steps.approvals.outputs.count }}" \
+              --policy base-policy.yml
+          else
+            prctl gate --pr "$PR_NUMBER" \
+              --approvals "${{ steps.approvals.outputs.count }}"
+          fi
       - name: Merge group already gated
         if: github.event_name == 'merge_group'
         run: |

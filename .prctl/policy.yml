@@ -37,6 +37,7 @@ risk:
     high:
       # 发版流水线、门禁自身、打包脚本：改错会直接影响发布
       - ".github/workflows/**"
+      - ".prctl/**"
       - "prctl/**"
       - "scripts/**"
       - "**/Dockerfile"

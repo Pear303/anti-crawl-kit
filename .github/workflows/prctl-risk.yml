@@ -32,7 +32,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           git fetch origin "$BASE_REF"
-          git diff --name-only "origin/$BASE_REF...HEAD" > changed.txt
+          git -c core.quotepath=false diff --name-only "origin/$BASE_REF...HEAD" > changed.txt
           prctl risk --pr "$PR_NUMBER" --files-from changed.txt
           LEVEL=$(python -c "import json; print(json.load(open('.prctl/artifacts/$PR_NUMBER/risk.json'))['level'])")
           echo "level=$LEVEL" >> "$GITHUB_OUTPUT"

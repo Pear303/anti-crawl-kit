@@ -75,6 +75,31 @@ def test_markdown_links_exist() -> None:
     assert not broken, "断链:\n" + "\n".join(broken)
 
 
+def test_prctl_policy_treats_gate_files_as_high() -> None:
+    """门禁规则自身必须是高风险，否则同一个 PR 可以把规则改弱再自我放行。"""
+    text = (ROOT / ".prctl" / "policy.yml").read_text(encoding="utf-8")
+    high_block = text.split("rules:")[1].split("medium:")[0]
+    assert '".prctl/**"' in high_block
+    assert '"prctl/**"' in high_block
+    assert '".github/workflows/**"' in high_block
+
+
+def test_prctl_workflows_unquote_paths() -> None:
+    """git 默认会给中文路径加引号和八进制转义，规则会匹配不到。"""
+    for name in ("prctl-gate.yml", "prctl-risk.yml"):
+        text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+        assert "core.quotepath=false" in text, f"{name} 没有关闭 quotepath"
+        assert "diff --name-only" in text
+
+
+def test_prctl_gate_guards_policy_changes() -> None:
+    """改门禁自身时，要用 base 分支的 policy 复核。"""
+    text = (ROOT / ".github" / "workflows" / "prctl-gate.yml").read_text(encoding="utf-8")
+    assert "base-policy.yml" in text
+    assert 'git show "origin/$BASE_REF:.prctl/policy.yml"' in text
+    assert "--policy base-policy.yml" in text
+
+
 def test_no_sensitive_profiles_in_repo() -> None:
     """profiles/ 下不应有 Cookies / Login Data 等真实登录态。
 
