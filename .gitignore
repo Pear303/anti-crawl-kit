@@ -22,6 +22,12 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
+# 覆盖率产物（只有 CI 门槛关心，不进仓库）
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
 # 本地配置 / 密钥
 .env
 *.local.yaml
