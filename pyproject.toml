@@ -15,13 +15,13 @@ http = ["curl_cffi>=0.7.0"]
 # 声明式平台配置（YAML）
 config = ["PyYAML>=6.0"]
 # MCP server（给 agent 直接调用）
-mcp = ["mcp>=1.0"]
+mcp = ["mcp>=1.0,<2"]
 # 全部运行时能力
 all = [
     "patchright>=1.62.2",
     "curl_cffi>=0.7.0",
     "PyYAML>=6.0",
-    "mcp>=1.0",
+    "mcp>=1.0,<2",
 ]
 # 开发与 CI
 dev = [

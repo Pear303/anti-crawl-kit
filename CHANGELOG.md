@@ -46,6 +46,10 @@
   动态 `__getattr__` 提供的 `__len__`，脏值不会让整批校验抛 `TypeError`。
 - `dev` 依赖的 mypy 加上界（`<3`），CI 的 typecheck 改为装 `.[all,dev]`，
   让可选依赖的存根参与检查，避免以后 mypy 大版本升级把 PR 全部打红。
+- `mcp` 依赖收窄为 `mcp>=1.0,<2`：mcp 2.x 已把 `FastMCP` 改名为
+  `MCPServer`（`mcp.server.fastmcp` 只剩报错存根），当前适配的是 1.x。
+- `notify.py` 的 `winsound.MessageBeep` / `MB_ICONHAND` 改用 `getattr` 探针：
+  Linux 的 typeshed 里 win­sound 没有这两个成员，会让跨平台类型的 CI 误报。
 
 ## [0.15.0] - 2026-11-24
 

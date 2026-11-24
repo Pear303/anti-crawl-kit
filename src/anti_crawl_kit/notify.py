@@ -266,7 +266,11 @@ $toast = [{ns}.ToastNotification]::new($template)
             if system == "Windows":
                 import winsound
 
-                winsound.MessageBeep(winsound.MB_ICONHAND)
+                # Linux 的 typeshed 里 winsound 没有这两个成员，用探针避免平台差异误报
+                beep = getattr(winsound, "MessageBeep", None)
+                flag = getattr(winsound, "MB_ICONHAND", 0)
+                if callable(beep):
+                    beep(flag)
                 return NotifyResult("sound", True, "winsound")
             if system == "Darwin":
                 subprocess.run(
