@@ -9,6 +9,9 @@ name: prctl-gate
 #    policy 重新分级并 gate，防止同一个 PR 把规则改弱再自我放行。
 # 3. base policy 落在 $RUNNER_TEMP，并用显式输出开关判断，不看工作区文件是否存在；
 #    否则 PR 可以先提交一个假的 base-policy.yml，再只改 src/ 诱使 gate 用它。
+#
+# 证据目录用固定标识 `local`，不跟 PR 号绑定：重建 PR 时号会变，
+# 绑定号会让门禁找不到已经审过的产物。
 
 on:
   pull_request:
@@ -19,6 +22,9 @@ permissions:
   contents: read
   pull-requests: read
   issues: read
+
+env:
+  PR_ID: local
 
 jobs:
   gate:
@@ -39,11 +45,10 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           git fetch origin "$BASE_REF"
           git -c core.quotepath=false diff --name-only "origin/$BASE_REF...HEAD" > changed.txt
-          prctl risk --pr "$PR_NUMBER" --files-from changed.txt
+          prctl risk --pr "$PR_ID" --files-from changed.txt
       - name: Count approvals
         id: approvals
         if: github.event_name == 'pull_request'
@@ -55,7 +60,7 @@ jobs:
             --jq '[.reviews | group_by(.author.login)[] | last | select(.state=="APPROVED")] | length')
           # 单人项目没有第二个人能点 approve：GitHub 上没有 review 时，
           # 回落到仓库里记录的独立复核（reviewer 与 security 两个全新上下文）。
-          APPROVALS_FILE=".prctl/artifacts/$PR_NUMBER/approvals.json"
+          APPROVALS_FILE=".prctl/artifacts/$PR_ID/approvals.json"
           if [ "$COUNT" -eq 0 ] && [ -f "$APPROVALS_FILE" ]; then
             COUNT=$(python -c \
               "import json,sys;print(len(set(json.load(open(sys.argv[1]))['approvers'])))" \
@@ -85,22 +90,20 @@ jobs:
       - name: Re-classify with base policy
         if: github.event_name == 'pull_request' && steps.selfmod.outputs.changed == 'true'
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           POLICY_PATH: ${{ steps.selfmod.outputs.policy_path }}
         run: |
-          prctl risk --pr "$PR_NUMBER" --files-from changed.txt --policy "$POLICY_PATH"
+          prctl risk --pr "$PR_ID" --files-from changed.txt --policy "$POLICY_PATH"
       - name: Run prctl gate
         if: github.event_name == 'pull_request'
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           POLICY_PATH: ${{ steps.selfmod.outputs.policy_path }}
         run: |
           if [ -n "$POLICY_PATH" ]; then
-            prctl gate --pr "$PR_NUMBER" \
+            prctl gate --pr "$PR_ID" \
               --approvals "${{ steps.approvals.outputs.count }}" \
               --policy "$POLICY_PATH"
           else
-            prctl gate --pr "$PR_NUMBER" \
+            prctl gate --pr "$PR_ID" \
               --approvals "${{ steps.approvals.outputs.count }}"
           fi
       - name: Merge group already gated
