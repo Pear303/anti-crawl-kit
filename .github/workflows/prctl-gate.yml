@@ -49,9 +49,18 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          COUNT=$(gh pr view "${{ github.event.pull_request.number }}" --json reviews \
+          COUNT=$(gh pr view "$PR_NUMBER" --json reviews \
             --jq '[.reviews | group_by(.author.login)[] | last | select(.state=="APPROVED")] | length')
+          # 单人项目没有第二个人能点 approve：GitHub 上没有 review 时，
+          # 回落到仓库里记录的独立复核（reviewer 与 security 两个全新上下文）。
+          APPROVALS_FILE=".prctl/artifacts/$PR_NUMBER/approvals.json"
+          if [ "$COUNT" -eq 0 ] && [ -f "$APPROVALS_FILE" ]; then
+            COUNT=$(python -c \
+              "import json,sys;print(len(set(json.load(open(sys.argv[1]))['approvers'])))" \
+              "$APPROVALS_FILE")
+          fi
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
       - name: Detect gate rule changes
         id: selfmod
