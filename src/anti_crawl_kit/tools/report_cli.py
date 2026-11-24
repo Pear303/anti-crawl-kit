@@ -79,7 +79,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--baseline",
         type=str,
         default="",
-        help="基线 JSON 或 auto（自动找同目录上一次同类型报告）；--dir 只支持 auto；有退化时退出码 1",
+        help=(
+            "基线 JSON 或 auto（自动找同目录上一次同类型报告）；"
+            "--dir 只支持 auto；有退化时退出码 1"
+        ),
     )
     return parser
 

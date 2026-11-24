@@ -17,15 +17,15 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from ._compat import StrEnum
-from typing import Any, Callable
+from typing import Any
 
+from ._compat import StrEnum
 from .alive import ensure_alive
 from .captcha import detect_captcha_page
 from .login import LoginStatus
 from .timeouts import (
-    CAPTCHA_POLL_SECONDS,
     CAPTCHA_WAIT_SECONDS,
     LOGIN_POLL_SECONDS,
     LOGIN_WAIT_SECONDS,

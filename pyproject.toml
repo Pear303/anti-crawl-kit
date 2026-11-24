@@ -26,6 +26,7 @@ all = [
 # 开发与 CI
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=5.0",
     "ruff>=0.6",
     "build>=1.2",
     "mypy>=1.11",
@@ -68,14 +69,34 @@ markers = [
     "network: 需要外网访问",
 ]
 
+[tool.coverage.run]
+source = ["anti_crawl_kit"]
+branch = false
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-exclude = [".venv", "build", "dist"]
+# prctl 是 vendored 的门禁工具，有独立 pyproject 和测试，不参与本包 lint
+exclude = [".venv", "build", "dist", "prctl"]
 
 [tool.ruff.lint]
-# 先只开「会直接导致运行错误」的规则，历史代码逐步收紧。
-select = ["E9", "F63", "F7", "F82"]
+# 常规集合：错误 + pyflakes + 警告 + import 排序 + 语法升级 + bugbear。
+# RUF100 单独开：无用的 noqa 会掩盖真实问题，必须能被发现。
+select = ["E", "F", "W", "I", "UP", "B", "RUF100"]
+
+[tool.ruff.lint.per-file-ignores]
+# ui_assets.py 只放内嵌 HTML/CSS/JS 字符串，行宽由前端语法决定，
+# 按 Python 代码折行反而会把样式表切碎。
+"src/anti_crawl_kit/ui_assets.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.10"

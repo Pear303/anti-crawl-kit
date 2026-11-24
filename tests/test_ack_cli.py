@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from anti_crawl_kit.tools.ack_cli import COMMANDS, main as ack_main
+from anti_crawl_kit.tools.ack_cli import COMMANDS
+from anti_crawl_kit.tools.ack_cli import main as ack_main
 
 pytest.importorskip("yaml", reason="部分子命令需要 [config] extra")
 

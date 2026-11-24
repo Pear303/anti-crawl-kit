@@ -69,7 +69,7 @@ runs directory, and proxy variables. Every problem comes with a copy-paste fix:
 
 ```text
 [OK]    Python 3.12.4 (>= 3.10)
-[OK]    anti-crawl-kit 0.14.0
+[OK]    anti-crawl-kit 0.15.0
 [WARN]  patchright 未安装
         browser_* steps are unavailable
         → pip install "anti-crawl-kit[browser]"

@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Risk Decision",
+  "type": "object",
+  "required": ["level", "approvals", "matched"],
+  "properties": {
+    "level": {"type": "string", "enum": ["low", "medium", "high"]},
+    "approvals": {"type": "integer", "minimum": 0},
+    "matched": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "level"],
+        "properties": {
+          "file": {"type": "string", "minLength": 1},
+          "level": {"type": "string", "enum": ["low", "medium", "high"]},
+          "patterns": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

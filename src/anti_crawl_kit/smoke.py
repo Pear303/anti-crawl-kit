@@ -34,12 +34,14 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
-from ._compat import StrEnum
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
+
+from ._compat import StrEnum
 
 
 class SmokeKind(StrEnum):
@@ -258,7 +260,10 @@ def count_in_html(html: str, selector: str) -> int:
 # ── 浏览器辅助 ─────────────────────────────────────
 
 _COUNT_JS = "(sel) => document.querySelectorAll(sel).length"
-_SCROLL_JS = "() => { window.scrollTo(0, document.body.scrollHeight); return document.body.scrollHeight; }"
+_SCROLL_JS = (
+    "() => { window.scrollTo(0, document.body.scrollHeight); "
+    "return document.body.scrollHeight; }"
+)
 _URL_JS = "() => location.href"
 
 
@@ -425,7 +430,7 @@ def _run_js_render(case: SmokeCase, http_client: Any, page: Any) -> SmokeResult:
     ok, actual = _judge(case, count)
     metrics = {"render_wait_ms": waited_ms}
     if hasattr(page, "last_nav_metrics"):
-        metrics["nav"] = dict(getattr(page, "last_nav_metrics") or {})
+        metrics["nav"] = dict(page.last_nav_metrics or {})
     return SmokeResult(
         case.name,
         str(case.kind),
@@ -466,7 +471,7 @@ def _run_slow_load(case: SmokeCase, page: Any) -> SmokeResult:
         actual += f"；耗时 {elapsed_ms}ms < 预期慢加载 {case.min_elapsed_ms}ms（用例需更新）"
     metrics = {"render_wait_ms": waited_ms}
     if hasattr(page, "last_nav_metrics"):
-        metrics["nav"] = dict(getattr(page, "last_nav_metrics") or {})
+        metrics["nav"] = dict(page.last_nav_metrics or {})
     return SmokeResult(
         case.name,
         str(case.kind),

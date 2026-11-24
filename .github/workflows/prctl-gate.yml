@@ -1,0 +1,112 @@
+name: prctl-gate
+
+# 总门禁：证据 / 审核 / 安全 / 风险 / 发布五项齐全才放行。
+# 规则来源是 .prctl/policy.yml，不是 workflow 里的硬编码。
+#
+# 三个安全约束：
+# 1. `core.quotepath=false`：中文文件名不加引号/八进制转义，否则路径规则匹配不到。
+# 2. 如果 PR 改了门禁规则（policy / schemas / prctl / workflows），用 base 分支的
+#    policy 重新分级并 gate，防止同一个 PR 把规则改弱再自我放行。
+# 3. base policy 落在 $RUNNER_TEMP，并用显式输出开关判断，不看工作区文件是否存在；
+#    否则 PR 可以先提交一个假的 base-policy.yml，再只改 src/ 诱使 gate 用它。
+#
+# 证据目录用固定标识 `local`，不跟 PR 号绑定：重建 PR 时号会变，
+# 绑定号会让门禁找不到已经审过的产物。
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  merge_group:
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+env:
+  PR_ID: local
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        if: github.event_name == 'pull_request'
+        with:
+          python-version: "3.12"
+      - name: Install prctl
+        if: github.event_name == 'pull_request'
+        run: python -m pip install --quiet -e ./prctl
+      - name: Classify changed files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch origin "$BASE_REF"
+          git -c core.quotepath=false diff --name-only "origin/$BASE_REF...HEAD" > changed.txt
+          prctl risk --pr "$PR_ID" --files-from changed.txt
+      - name: Count approvals
+        id: approvals
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          COUNT=$(gh pr view "$PR_NUMBER" --json reviews \
+            --jq '[.reviews | group_by(.author.login)[] | last | select(.state=="APPROVED")] | length')
+          # 单人项目没有第二个人能点 approve：GitHub 上没有 review 时，
+          # 回落到仓库里记录的独立复核（reviewer 与 security 两个全新上下文）。
+          APPROVALS_FILE=".prctl/artifacts/$PR_ID/approvals.json"
+          if [ "$COUNT" -eq 0 ] && [ -f "$APPROVALS_FILE" ]; then
+            COUNT=$(python -c \
+              "import json,sys;print(len(set(json.load(open(sys.argv[1]))['approvers'])))" \
+              "$APPROVALS_FILE")
+          fi
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+      - name: Detect gate rule changes
+        id: selfmod
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          POLICY_PATH="$RUNNER_TEMP/base-policy.yml"
+          if grep -qE '^(\.prctl/(policy\.yml|schemas/)|prctl/|\.github/workflows/)' changed.txt; then
+            if git cat-file -e "origin/$BASE_REF:.prctl/policy.yml" 2>/dev/null; then
+              git show "origin/$BASE_REF:.prctl/policy.yml" > "$POLICY_PATH"
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              echo "policy_path=$POLICY_PATH" >> "$GITHUB_OUTPUT"
+              echo "PR 修改了门禁规则，将用 base 分支的 policy 复核。"
+            else
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              echo "base 分支还没有 policy，跳过历史规则复核。"
+            fi
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Re-classify with base policy
+        if: github.event_name == 'pull_request' && steps.selfmod.outputs.changed == 'true'
+        env:
+          POLICY_PATH: ${{ steps.selfmod.outputs.policy_path }}
+        run: |
+          prctl risk --pr "$PR_ID" --files-from changed.txt --policy "$POLICY_PATH"
+      - name: Run prctl gate
+        if: github.event_name == 'pull_request'
+        env:
+          POLICY_PATH: ${{ steps.selfmod.outputs.policy_path }}
+        run: |
+          if [ -n "$POLICY_PATH" ]; then
+            prctl gate --pr "$PR_ID" \
+              --approvals "${{ steps.approvals.outputs.count }}" \
+              --policy "$POLICY_PATH"
+          else
+            prctl gate --pr "$PR_ID" \
+              --approvals "${{ steps.approvals.outputs.count }}"
+          fi
+      - name: Merge group already gated
+        if: github.event_name == 'merge_group'
+        run: |
+          echo "PR 级 prctl gate 已通过；合并队列只重跑 CI。"

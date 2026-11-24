@@ -151,3 +151,65 @@ def test_parse_count_long_input_is_fast() -> None:
     elapsed = time.perf_counter() - start
     assert result == 0
     assert elapsed < 2.0, f"parse_count 处理超长输入耗时 {elapsed:.3f}s"
+
+
+# ── clean_html / safe_filename / make_dedupe_key ────────────────
+
+
+def test_clean_html_strips_tags_and_unescapes() -> None:
+    from anti_crawl_kit.text import clean_html
+
+    assert clean_html("<em>关键词</em> &amp; 更多") == "关键词 & 更多"
+    assert clean_html(None) == ""
+    assert clean_html("") == ""
+
+
+def test_clean_html_removes_anti_crawl_watermark() -> None:
+    from anti_crawl_kit.text import clean_html
+
+    zero_width = "正常\u200b文本"
+    assert clean_html(zero_width) == "正常文本"
+    assert clean_html("前mmMwWLliI0fiflO&1后") == "前后"
+    assert clean_html("wordwordwordwordword正文") == "正文"
+
+
+def test_clean_anti_crawl_watermark_keeps_normal_words() -> None:
+    from anti_crawl_kit.text import clean_anti_crawl_watermark
+
+    assert clean_anti_crawl_watermark("word word word") == "word word word"
+    assert clean_anti_crawl_watermark("") == ""
+
+
+def test_safe_filename_replaces_illegal_chars() -> None:
+    from anti_crawl_kit.text import safe_filename
+
+    assert safe_filename('a<b>c:d"e/f\\g|h?i*j') == "a_b_c_d_e_f_g_h_i_j"
+    assert safe_filename("  .name.  ") == "name"
+    assert safe_filename("", default_name="fallback") == "fallback"
+    assert safe_filename("...", default_name="fallback") == "fallback"
+    assert safe_filename("abcdef", max_len=3) == "abc"
+    assert safe_filename("ab . cd", max_len=3) == "ab"
+
+
+def test_make_dedupe_key_priority() -> None:
+    from anti_crawl_kit.text import make_dedupe_key
+
+    # 1. platform + external_id 最优先
+    assert make_dedupe_key("bilibili", "BV1xx", "https://b23.tv/x") == "bilibili:BV1xx"
+
+    # 2. 没有 id 时用规范化 URL（去掉 query/fragment/末尾斜杠）
+    assert (
+        make_dedupe_key("weibo", "", "https://weibo.com/a/b/?from=timeline#top")
+        == "weibo:https://weibo.com/a/b"
+    )
+
+    # 3. 最后才用 keyword:author:title
+    assert (
+        make_dedupe_key("zhihu", "", "", keyword="爬虫", title="标题", author_external_id="u1")
+        == "zhihu:爬虫:u1:标题"
+    )
+
+    # 三者缺一 → None
+    assert make_dedupe_key("zhihu", "", "", keyword="爬虫") is None
+    assert make_dedupe_key("", "", "https://x.test/a") is None
+    assert make_dedupe_key("", "id1") is None

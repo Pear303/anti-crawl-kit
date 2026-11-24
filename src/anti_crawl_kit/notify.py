@@ -110,7 +110,10 @@ class Notifier:
         sound: bool | None = None,
         timeout: float = 5.0,
     ):
-        self.webhook = (webhook if webhook is not None else os.getenv("AC_KIT_NOTIFY_WEBHOOK", "")).strip()
+        raw_webhook = (
+            webhook if webhook is not None else os.getenv("AC_KIT_NOTIFY_WEBHOOK", "")
+        )
+        self.webhook = raw_webhook.strip()
         self.desktop = (
             desktop if desktop is not None else os.getenv("AC_KIT_NOTIFY_DESKTOP", "1") != "0"
         )
@@ -212,16 +215,23 @@ class Notifier:
     @staticmethod
     def _toast_windows(title: str, message: str) -> NotifyResult:
         """Windows 10/11 Toast。用 powershell.exe（5.1）兼容性最好。"""
-        script = r"""
+        ns = "Windows.UI.Notifications"
+        toast_mgr = f"[{ns}.ToastNotificationManager, {ns}, ContentType = WindowsRuntime]"
+        xml_doc = (
+            "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, "
+            "ContentType = WindowsRuntime]"
+        )
+        script = f"""
 $ErrorActionPreference = 'Stop'
-[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
-$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+{toast_mgr} | Out-Null
+{xml_doc} | Out-Null
+$template = [{ns}.ToastNotificationManager]::GetTemplateContent(
+    [{ns}.ToastTemplateType]::ToastText02)
 $nodes = $template.GetElementsByTagName('text')
 $nodes.Item(0).AppendChild($template.CreateTextNode($env:AC_KIT_TOAST_TITLE)) | Out-Null
 $nodes.Item(1).AppendChild($template.CreateTextNode($env:AC_KIT_TOAST_BODY)) | Out-Null
-$toast = [Windows.UI.Notifications.ToastNotification]::new($template)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('anti_crawl_kit').Show($toast)
+$toast = [{ns}.ToastNotification]::new($template)
+[{ns}.ToastNotificationManager]::CreateToastNotifier('anti_crawl_kit').Show($toast)
 """
         env = os.environ.copy()
         env["AC_KIT_TOAST_TITLE"] = title[:120]

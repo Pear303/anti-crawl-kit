@@ -12,7 +12,9 @@ from anti_crawl_kit.mcp_server import JobManager, ToolService
 
 
 class Resp:
-    def __init__(self, text: str, status_code: int = 200, url: str = "https://example.com/") -> None:
+    def __init__(
+        self, text: str, status_code: int = 200, url: str = "https://example.com/"
+    ) -> None:
         self.text = text
         self.status_code = status_code
         self.url = url

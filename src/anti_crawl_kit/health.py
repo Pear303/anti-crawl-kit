@@ -45,11 +45,13 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from ._compat import StrEnum
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
+
+from ._compat import StrEnum
 
 
 class HealthStatus(StrEnum):
@@ -84,7 +86,7 @@ class HealthTarget:
     probe_file: str = ""             # 探针清单对应的源码文件（默认取 collector_module）
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "HealthTarget":
+    def from_dict(cls, data: Mapping[str, Any]) -> HealthTarget:
         def _tuple(key: str) -> tuple[str, ...]:
             value = data.get(key, ())
             if isinstance(value, str):
@@ -318,7 +320,10 @@ def check_target(
         if not target.collector_module:
             results.append(
                 CheckResult(
-                    "registry", target.platform, HealthStatus.FAIL, "有 collector_class 但缺 collector_module"
+                    "registry",
+                    target.platform,
+                    HealthStatus.FAIL,
+                    "有 collector_class 但缺 collector_module",
                 )
             )
         else:
@@ -661,7 +666,11 @@ def probe_health_page(
         )
     if page_state == "login":
         return CheckResult(
-            "probe", target.platform, HealthStatus.WARN, f"跳转登录（需登录态复测）: {detail}", extra
+            "probe",
+            target.platform,
+            HealthStatus.WARN,
+            f"跳转登录（需登录态复测）: {detail}",
+            extra,
         )
     if hits <= 0:
         return CheckResult(

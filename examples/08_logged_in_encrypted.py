@@ -88,7 +88,9 @@ def main() -> int:
     parser.add_argument("--profile", default="./profiles/demo")
     parser.add_argument("--platform", default="", help="用于平台验证码 DOM 检测，如 xiaohongshu")
     parser.add_argument("--login-js", default="", help="返回 true=已登录 的 JS 文件")
-    parser.add_argument("--content-selector", default="article, main, #js_content, .article-content")
+    parser.add_argument(
+        "--content-selector", default="article, main, #js_content, .article-content"
+    )
     parser.add_argument("--api-pattern", default="", help="要拦截的接口 URL 子串，如 /api/")
     parser.add_argument("--state-key", default="", help="SSR 全局状态变量名，如 __INITIAL_STATE__")
     parser.add_argument("--out", default="output/encrypted_page.json")
@@ -161,7 +163,10 @@ def main() -> int:
             elif login_js:
                 print("[1/3] 跳过登录等待，直接使用已有 profile。", flush=True)
             else:
-                print("[1/3] 未提供 --login-js，跳过登录检测；若页面要求登录请手动处理。", flush=True)
+                print(
+                    "[1/3] 未提供 --login-js，跳过登录检测；若页面要求登录请手动处理。",
+                    flush=True,
+                )
 
             # ── 2. 打开目标页 + 拦截接口 ───────────────────
             print("[2/3] 打开目标页并等待内容稳定...", flush=True)

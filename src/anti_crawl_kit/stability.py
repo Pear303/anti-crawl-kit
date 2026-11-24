@@ -19,9 +19,10 @@ from __future__ import annotations
 
 import statistics
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from .smoke import count_in_html
 

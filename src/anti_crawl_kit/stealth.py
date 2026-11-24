@@ -115,7 +115,8 @@ FRAMEWORK_DETECT_JS = """(() => {
         var app = document.querySelector('#app');
         r.vue3 = !!(app && app.__vue_app__);
         r.vue2 = !!(app && app.__vue__);
-        r.react = !!(window.__REACT_DEVTOOLS_GLOBAL_HOOK__) || !!document.querySelector('[data-reactroot]');
+        r.react = !!(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
+            || !!document.querySelector('[data-reactroot]');
         r.nextjs = !!(window.__NEXT_DATA__);
         r.nuxt = !!(window.__NUXT__);
         if (r.vue3 && app.__vue_app__) {

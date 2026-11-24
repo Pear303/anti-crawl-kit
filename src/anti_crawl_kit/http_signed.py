@@ -20,9 +20,10 @@ YAML 示例见 ``examples/platforms/bilibili_http_signed.yaml``。
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 # 统一的失败分类，和 datasource.StopReason 对齐
 SIGNED_RISK_KINDS = (
@@ -168,7 +169,9 @@ def load_http_signed_spec(path: str | Path) -> HttpSignedSpec:
         try:
             import yaml
         except ImportError as exc:
-            raise RuntimeError("读取 YAML 需要 PyYAML：pip install 'anti-crawl-kit[config]'") from exc
+            raise RuntimeError(
+                "读取 YAML 需要 PyYAML：pip install 'anti-crawl-kit[config]'"
+            ) from exc
         data = yaml.safe_load(text)
     else:
         data = json.loads(text)

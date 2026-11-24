@@ -33,11 +33,12 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 _VOID_TAGS = frozenset(
     {
@@ -87,7 +88,7 @@ class ElementFeatures:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ElementFeatures":
+    def from_dict(cls, data: dict[str, Any]) -> ElementFeatures:
         return cls(
             tag=str(data.get("tag") or ""),
             text=str(data.get("text") or ""),
@@ -138,7 +139,7 @@ class AdaptiveProfile:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AdaptiveProfile":
+    def from_dict(cls, data: dict[str, Any]) -> AdaptiveProfile:
         return cls(
             name=str(data.get("name") or ""),
             url=str(data.get("url") or ""),
@@ -186,7 +187,7 @@ def load_profile(path: str | Path) -> AdaptiveProfile | None:
 class _Node:
     __slots__ = ("tag", "attrs", "children", "parent", "texts")
 
-    def __init__(self, tag: str, attrs: dict[str, str], parent: "_Node | None"):
+    def __init__(self, tag: str, attrs: dict[str, str], parent: _Node | None):
         self.tag = tag
         self.attrs = attrs
         self.children: list[_Node] = []
@@ -295,7 +296,7 @@ def _features(node: _Node) -> ElementFeatures:
 _SAFE_NAME_RE = re.compile(r"^[A-Za-z_][\w-]*$")
 
 
-def _safe_classes(node: "_Node") -> list[str]:
+def _safe_classes(node: _Node) -> list[str]:
     raw = node.attrs.get("class") or ""
     return [c for c in raw.split() if _SAFE_NAME_RE.match(c)]
 

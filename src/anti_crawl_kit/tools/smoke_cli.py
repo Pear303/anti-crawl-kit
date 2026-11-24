@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import sys
 from contextlib import ExitStack
-from pathlib import Path
 
 from anti_crawl_kit.smoke import (
     DEFAULT_CASES,

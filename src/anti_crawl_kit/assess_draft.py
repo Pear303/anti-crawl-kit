@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 # 字段命名顺序：title/url 单独处理，其余按这个顺序兜底
 _NAME_ORDER = ("name", "price", "stock", "meta", "extra")

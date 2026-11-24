@@ -1,0 +1,89 @@
+{
+  "pr": "local",
+  "conclusion": "pass",
+  "findings": [
+    {
+      "id": "SEC-001",
+      "severity": "medium",
+      "category": "ci",
+      "location": ".prctl/policy.yml:40-41 / .github/CODEOWNERS:3-4 / .github/workflows/prctl-gate.yml:77-82",
+      "problem": "门禁规则可被同一 PR 改弱：gate 读的是工作区里的 policy，而该文件本身不算 high。",
+      "evidence": "修复后 prctl risk --files .prctl/policy.yml -> high/2；base 复核分支存在；CODEOWNERS 覆盖 /.prctl/policy.yml 与 /.prctl/schemas/。",
+      "fix": "policy 与 schemas 列为 high；gate 检测到规则改动时用 base 分支 policy 复核。",
+      "status": "fixed"
+    },
+    {
+      "id": "SEC-002",
+      "severity": "medium",
+      "category": "ci",
+      "location": ".github/workflows/prctl-gate.yml:45 / .github/workflows/prctl-risk.yml:35",
+      "problem": "git quotepath 把非 ASCII 路径转义，导致 .github/workflows/** 匹配不到，高风险被降级。",
+      "evidence": "两个 workflow 均为 git -c core.quotepath=false diff --name-only；临时仓库实测中文 workflow 名判 high。",
+      "fix": "关闭 quotepath；控制字符场景见 SEC-007（已接受）。",
+      "status": "fixed"
+    },
+    {
+      "id": "SEC-003",
+      "severity": "low",
+      "category": "path",
+      "location": "src/anti_crawl_kit/tools/health_cli.py:106-112 / src/anti_crawl_kit/assess_draft.py:327-338",
+      "problem": "--out / --out-dir 不限制输出位置，exists() 守卫会跟随符号链接。",
+      "evidence": "本地 CLI 实测可写到 cwd 之外；重复执行不覆盖已有文件。",
+      "fix": "可选加固：O_EXCL|O_NOFOLLOW。",
+      "status": "accepted",
+      "disposition_note": "本地 CLI，路径由使用者自己给，模板内容是固定常量（无私密或可执行载荷），已有 exists 守卫避免误覆盖；符号链接场景要求攻击者已能在目标目录写文件，收益为零。"
+    },
+    {
+      "id": "SEC-004",
+      "severity": "low",
+      "category": "design",
+      "location": "prctl/prctl/gate.py:26-174",
+      "problem": "prctl gate 只校验 artifact 的结构与约束，不校验产物来源（自证）。",
+      "evidence": "手写 4 个 artifact 即可 OVERALL: PASS；README 已声明该局限。",
+      "fix": "若要提高保证强度，由受信步骤生成 artifact 或与 CI 日志交叉校验。",
+      "status": "accepted",
+      "disposition_note": "README「局限」章节已声明只校验结构、不校验真实性；CI 会从 PR diff 重算 risk.json，抵消「把高风险标低」一半问题。"
+    },
+    {
+      "id": "SEC-005",
+      "severity": "medium",
+      "category": "ci",
+      "location": ".github/workflows/prctl-gate.yml:62-92",
+      "problem": "base policy 锚点放在工作区根目录、用 [ -f ] 判断存在性，PR 可预置假文件绕过。",
+      "evidence": "POLICY_PATH=$RUNNER_TEMP/base-policy.yml，policy_path 走 GITHUB_OUTPUT，gate 用 [ -n ] 判断；工作区放同名诱饵不会被引用。",
+      "fix": "锚点移出工作区，改用显式输出开关。",
+      "status": "fixed"
+    },
+    {
+      "id": "SEC-006",
+      "severity": "low",
+      "category": "design",
+      "location": ".prctl/policy.yml:38-55 / .github/workflows/prctl-gate.yml:63",
+      "problem": ".prctl/** 把所有 PR 判成 high（每个 PR 都提交 artifacts），high 失去区分度。",
+      "evidence": ".prctl/artifacts/** -> low/0；.prctl/policy.yml 与 schemas -> high/2；普通 PR 不再触发 selfmod。",
+      "fix": "high 收窄为 policy 与 schemas；artifacts 归 low。",
+      "status": "fixed"
+    },
+    {
+      "id": "SEC-007",
+      "severity": "low",
+      "category": "ci",
+      "location": ".github/workflows/prctl-gate.yml:45",
+      "problem": "core.quotepath=false 只关闭非 ASCII 转义；含控制字符/引号/反斜杠的路径仍会被 C 风格引号包裹。",
+      "evidence": "空格路径实测可用；换行/制表符文件名在本机无法构造，依据 git quote_c_style 既定行为评估。",
+      "fix": "彻底方案：git diff -z + prctl 增加 --files0-from。",
+      "status": "accepted",
+      "disposition_note": "中文名（真实风险）已修复；剩余场景要求攻击者在 Linux 侧创建含控制字符的文件名，构造难度与可见度都高，降级幅度仅 high→medium，且文件本身仍在 PR diff 中供人工审阅。"
+    },
+    {
+      "id": "SEC-008",
+      "severity": "low",
+      "category": "ci",
+      "location": "prctl/prctl/policy.py:78-95",
+      "problem": "Policy.load 对显式指定但不存在/为空的 policy 路径静默回落内置 DEFAULTS，门禁可能无告警地用错规则。",
+      "evidence": "修复前 prctl risk --policy <不存在> 用 DEFAULTS 判 medium/1；修复后抛 FileNotFoundError: policy file not found。",
+      "fix": "Policy.load 增加 strict 参数；CLI 显式 --policy 不存在或解析为空时直接报错。",
+      "status": "fixed"
+    }
+  ]
+}

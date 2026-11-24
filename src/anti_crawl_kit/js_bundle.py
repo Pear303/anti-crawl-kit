@@ -45,8 +45,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable
+from typing import Any
 from urllib.parse import urljoin, urlparse
 
 from .user_agent import get_ua_for_impersonate

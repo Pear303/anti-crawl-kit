@@ -1,0 +1,10 @@
+# 高风险路径：发版与门禁规则。个人项目，负责人是仓库所有者。
+/.github/workflows/   @Pear303
+/.prctl/policy.yml    @Pear303
+/.prctl/schemas/      @Pear303
+/prctl/               @Pear303
+/pyproject.toml       @Pear303
+/requirements.txt     @Pear303
+
+# 默认负责人
+*                     @Pear303

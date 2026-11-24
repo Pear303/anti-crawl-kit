@@ -1,0 +1,114 @@
+{
+  "goal": "修复 parse_count / normalize_count 的复合中文计数解析：按“数字+连续单位”分段累加，兼容数字与单位间的空白/NBSP，只累加第一段连续计数，小数用 Decimal 精确计算，并对超长输入与超长单位串做安全兜底，同时保持纯数字与单单位计数的既有行为。",
+  "ui_change": false,
+  "no_ui_reason": "本次改动仅涉及 src/anti_crawl_kit/text.py 中的纯函数计数解析逻辑及对应单元测试，不涉及任何界面、CLI 输出或浏览器交互，因此无 UI 变更。",
+  "acceptance_criteria": [
+    {
+      "criterion": "parse_count 与 normalize_count 对 2亿300万、1.5亿2000万、1万亿、10万5千、1亿零300万 均返回一致的正确值",
+      "result": "PASS",
+      "evidence": "tests/test_text.py::test_parse_count_compound_units 与 test_normalize_count_compound_units 各 5 组参数（共 10 个用例）全部通过"
+    },
+    {
+      "criterion": "R-001 兼容性回归：数字与单位之间的空白/NBSP/全角空格必须容忍，1.2 亿 → 120000000、1 234万 → 12340000、2399.2 万 → 23992000、1.2 亿 → 120000000、1.2　亿 → 120000000",
+      "result": "PASS",
+      "evidence": "tests/test_text.py::test_parse_count_tolerates_whitespace 与 test_normalize_count_tolerates_whitespace 各 5 组参数（含 space-yi、thousand-grouped-wan、space-wan、nbsp-yi、ideographic-space-yi）共 10 个用例全部通过；parse_count 现于去除零宽字符后执行 re.sub(r\"\\s+\", \"\", text)"
+    },
+    {
+      "criterion": "R-002 语义回归：只累加第一段连续计数，段间只允许“零”和空白；销量2亿，营收3万 → 200000000、5万～10万 → 50000、2亿-3万 → 200000000、1亿abc2万 → 100000000",
+      "result": "PASS",
+      "evidence": "tests/test_text.py::test_parse_count_stops_at_non_separator 与 test_normalize_count_stops_at_non_separator 各 4 组参数（two-counts-comma、range-wan、two-counts-dash、text-between）共 8 个用例全部通过；实现用 finditer 记录上一个有效段 end，gap 出现非“零”/非空白字符即 break"
+    },
+    {
+      "criterion": "R-003 精度回归：Decimal 精确乘法，1.13万 → 11300、2.03百 → 203、1.13亿 → 113000000，不再因 float 截断少 1",
+      "result": "PASS",
+      "evidence": "tests/test_text.py::test_parse_count_decimal_precision 与 test_normalize_count_decimal_precision 各 3 组参数（wan-two-decimals、bai-two-decimals、yi-two-decimals）共 6 个用例全部通过；实现为 int(Decimal(num_str) * multiplier)，捕获 InvalidOperation"
+    },
+    {
+      "criterion": "SEC-001 DoS 回归：parse_count('1'*20000 + 'a' + '万') == 0，且必须快速返回，不得 O(n²) 回溯",
+      "result": "PASS",
+      "evidence": "tests/test_text.py::test_parse_count_long_input_is_fast 通过；实测 PYTHONPATH=src 下同一输入 result=0、elapsed=0.000526s（修复前约 11.27s）。输入长度超过 1000 直接在 parse_count 返回 0，正则单位组允许空后用 finditer 线性扫描"
+    },
+    {
+      "criterion": "SEC-002 输入校验回归：parse_count('9' + '亿'*40) == 0 且不抛异常、normalize_count('9' + '亿'*40) is None；parse_count('1'*1001) == 0；单位串上限 8、输入上限 1000",
+      "result": "PASS",
+      "evidence": "tests/test_text.py::test_parse_count_invalid_input（unit-run-overflow、long-digit-dos、input-too-long 共 3 个用例）、test_normalize_count_invalid_input（同 3 个用例，均返回 None）与 test_parse_count_unit_run_at_limit（1+亿*8 = 10**64，边界值仍有效）全部通过；不再抛 OverflowError"
+    },
+    {
+      "criterion": "保持既有行为：2399.2万、1.0万、1.2亿、531、1,234，以及 parse_count('-')=0、parse_count('abc')=0、parse_count('2.5')=0、normalize_count(None/''/'-'/'abc')=None",
+      "result": "PASS",
+      "evidence": "tests/test_text.py::test_parse_count_existing_behavior 共 8 个参数用例与 test_normalize_count_existing_behavior 共 10 个参数用例全部通过"
+    },
+    {
+      "criterion": "tests/test_text.py 覆盖验收、空白兼容、分段语义、Decimal 精度与安全用例",
+      "result": "PASS",
+      "evidence": "tests/test_text.py 共 13 个测试函数、60 个参数用例（python -m pytest tests/test_text.py -q 输出 60 passed in 0.81s）"
+    },
+    {
+      "criterion": "python -m pytest tests -q 全绿",
+      "result": "PASS",
+      "evidence": "python -m pytest tests -q 输出：577 passed, 5 skipped in 9.90s（日志 .prctl/artifacts/local-1/pytest.log）"
+    },
+    {
+      "criterion": "python -m ruff check src tests 通过",
+      "result": "PASS",
+      "evidence": "python -m ruff check src tests 输出：All checks passed!（退出码 0）"
+    },
+    {
+      "criterion": "仅修改 src/anti_crawl_kit/text.py 并更新 tests/test_text.py 与 .prctl 证据，不改其他文件",
+      "result": "PASS",
+      "evidence": "git status --short 显示 M src/anti_crawl_kit/text.py、?? tests/test_text.py、?? .prctl/；git diff --stat 为 1 file changed, 79 insertions(+), 19 deletions(-)，未改动其他源码、依赖或配置"
+    }
+  ],
+  "commands": [
+    {
+      "command": "python -m pytest tests/test_text.py -q",
+      "output": "60 passed in 0.81s"
+    },
+    {
+      "command": "python -m pytest tests -q",
+      "output": "577 passed, 5 skipped in 9.90s"
+    },
+    {
+      "command": "python -m ruff check src tests",
+      "output": "All checks passed! (exit 0)"
+    },
+    {
+      "command": "PYTHONPATH=src python3 - <<'PY' (parse_count/normalize_count 回归与安全探针)",
+      "output": "{'1.2 亿': 120000000, '1 234万': 12340000, '销量2亿，营收3万': 200000000, '5万～10万': 50000, '1.13万': 11300, '2.03百': 203, '9+亿*40': 0}\nlong-input: result=0 elapsed=0.000526s\nnormalize('9'+'亿'*40) = None"
+    },
+    {
+      "command": "git status --short && git diff --stat",
+      "output": "M src/anti_crawl_kit/text.py\n?? .prctl/\n?? tests/test_text.py\n\n src/anti_crawl_kit/text.py | 98 +++++++++++++++++++++++++++++++++++++---------\n 1 file changed, 79 insertions(+), 19 deletions(-)"
+    }
+  ],
+  "run_evidence": {
+    "start_command": "python -m pytest tests -q",
+    "screenshots": [],
+    "logs": [
+      ".prctl/artifacts/local-1/pytest.log"
+    ]
+  },
+  "impact": {
+    "affected_modules": [
+      "anti_crawl_kit.text (parse_count, normalize_count, 内部 _parse_unit_count)",
+      "anti_crawl_kit.generic (transform=\"count\" 时调用 parse_count)"
+    ],
+    "compatibility": "公开函数签名与返回类型不变；纯整数、纯小数无单位、逗号数字、单单位计数以及数字/单位间空白（含 NBSP、全角空格）的旧行为全部保留。相对第一轮修复有两处按 docstring 契约收紧的预期变化：多段非连续计数文本只取第一段（如“销量2亿，营收3万”由 200030000 变为 200000000），超长输入/超长单位串判无效（parse_count 返回 0、normalize_count 返回 None）。相较 HEAD 的错误结果（如 2亿300万 从 23000000 修正为 203000000、1.2 亿 保持 120000000）属于 bug 修复。",
+    "risk_notes": "纯逻辑库改动，无 API、依赖、配置或 UI 变更；影响面限于计数解析结果。1000 字符输入上限与 8 个单位上限远高于正常计数字段，误伤概率极低；主要风险是调用方依赖第一轮中间版本的“全段相加”行为，但该行为与文档契约不符，已在证据中标注。"
+  },
+  "security": {
+    "secrets": "无新增或使用任何密钥、令牌或个人凭据。",
+    "input_validation": "计数字段视为不可信页面文本：单位组改为允许空的 ([十百千万亿]*) 并用 finditer 线性扫描，避免长数字段 O(n²) 回溯；输入超过 1000 字符直接判无效；单位串超过 8 个的段跳过、不抛异常；小数用 Decimal 精确计算并捕获 InvalidOperation。未使用 eval，非法输入统一回退为 0/None，未引入文件、网络或命令执行。",
+    "authz": "不涉及鉴权或权限逻辑。",
+    "dependencies": "未新增或修改任何依赖，未改动 requirements.txt；Decimal 来自 Python 标准库。"
+  },
+  "rollback": {
+    "flag": "无功能开关（纯函数库修复，回滚方式为 git revert）",
+    "steps": [
+      "git revert 本次提交，或恢复 src/anti_crawl_kit/text.py 的旧实现并删除 tests/test_text.py",
+      "重新运行 python -m pytest tests -q 确认测试恢复旧基线"
+    ],
+    "verification": "python -m pytest tests -q 全绿；此时 parse_count('2亿300万') 回到旧值 23000000，可确认回滚生效。",
+    "data_reversible": true
+  }
+}

@@ -27,10 +27,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 
 from .data_contract import (
     DataContract,
@@ -80,7 +81,7 @@ class AssessmentConfig:
         data: Mapping[str, Any],
         *,
         base_dir: str | Path | None = None,
-    ) -> "AssessmentConfig":
+    ) -> AssessmentConfig:
         base = Path(base_dir) if base_dir else Path.cwd()
 
         def resolve(value: str) -> str:

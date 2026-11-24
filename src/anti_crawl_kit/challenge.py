@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
-import time
+import re
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -111,8 +111,10 @@ _BODY_BLOCKED_KEYWORDS = (
     "Too Many Requests",
 )
 
-_DOM_PROBE_JS = """
-(opts) => {
+# 未替换的占位符形如 __SELECTORS__；必须以大写字母开头，避免误伤注释分隔线
+_PLACEHOLDER_RE = re.compile(r"__[A-Z][A-Z_]*__")
+
+_DOM_PROBE_JS_TEMPLATE = """(opts) => {
   function visible(el) {
     if (!el) return false;
     var r = el.getBoundingClientRect();
@@ -124,7 +126,7 @@ _DOM_PROBE_JS = """
     return true;
   }
 
-  var selectors = %s;
+  var selectors = __SELECTORS__;
   for (var i = 0; i < selectors.length; i++) {
     var nodes = document.querySelectorAll(selectors[i]);
     for (var j = 0; j < nodes.length; j++) {
@@ -136,13 +138,13 @@ _DOM_PROBE_JS = """
   }
 
   var title = document.title || '';
-  var titleCaptcha = %s;
+  var titleCaptcha = __TITLE_CAPTCHA__;
   for (var k = 0; k < titleCaptcha.length; k++) {
     if (title.indexOf(titleCaptcha[k]) !== -1) {
       return {detected: true, kind: 'captcha', reason: 'title:' + titleCaptcha[k], title: title};
     }
   }
-  var titleBlocked = %s;
+  var titleBlocked = __TITLE_BLOCKED__;
   for (var m = 0; m < titleBlocked.length; m++) {
     if (title.indexOf(titleBlocked[m]) !== -1) {
       return {detected: true, kind: 'blocked', reason: 'title:' + titleBlocked[m], title: title};
@@ -151,13 +153,13 @@ _DOM_PROBE_JS = """
 
   var body = (document.body && document.body.innerText) || '';
   if (opts && opts.scanBody && body.length <= (opts.maxChars || 4000)) {
-    var bodyCaptcha = %s;
+    var bodyCaptcha = __BODY_CAPTCHA__;
     for (var n = 0; n < bodyCaptcha.length; n++) {
       if (body.indexOf(bodyCaptcha[n]) !== -1) {
         return {detected: true, kind: 'captcha', reason: 'body:' + bodyCaptcha[n], title: title};
       }
     }
-    var bodyBlocked = %s;
+    var bodyBlocked = __BODY_BLOCKED__;
     for (var p = 0; p < bodyBlocked.length; p++) {
       if (body.indexOf(bodyBlocked[p]) !== -1) {
         return {detected: true, kind: 'blocked', reason: 'body:' + bodyBlocked[p], title: title};
@@ -167,13 +169,37 @@ _DOM_PROBE_JS = """
 
   return {detected: false, kind: 'ok', reason: '', title: title};
 }
-""" % (
-    json.dumps(list(_CAPTCHA_SELECTORS), ensure_ascii=False),
-    json.dumps(list(_TITLE_CAPTCHA_KEYWORDS), ensure_ascii=False),
-    json.dumps(list(_TITLE_BLOCKED_KEYWORDS), ensure_ascii=False),
-    json.dumps(list(_BODY_CAPTCHA_KEYWORDS), ensure_ascii=False),
-    json.dumps(list(_BODY_BLOCKED_KEYWORDS), ensure_ascii=False),
-)
+"""
+
+
+def _build_dom_probe_js() -> str:
+    """把关键词表注入 DOM 探测脚本（具名占位符，避免 % 格式化）。"""
+    values = {
+        "__SELECTORS__": _CAPTCHA_SELECTORS,
+        "__TITLE_CAPTCHA__": _TITLE_CAPTCHA_KEYWORDS,
+        "__TITLE_BLOCKED__": _TITLE_BLOCKED_KEYWORDS,
+        "__BODY_CAPTCHA__": _BODY_CAPTCHA_KEYWORDS,
+        "__BODY_BLOCKED__": _BODY_BLOCKED_KEYWORDS,
+    }
+
+    # 只校验模板里的占位符：注入内容可能含站点自己的 __NEXT_DATA__ 这类 token，
+    # 如果扫成品会把合法关键词误判成「未替换」。
+    undeclared = set(_PLACEHOLDER_RE.findall(_DOM_PROBE_JS_TEMPLATE)) - set(values)
+    if undeclared:
+        raise RuntimeError(f"DOM 探测脚本模板里有未定义的占位符: {sorted(undeclared)}")
+
+    js = _DOM_PROBE_JS_TEMPLATE
+    for placeholder, keywords in values.items():
+        js = js.replace(placeholder, json.dumps(list(keywords), ensure_ascii=False))
+
+    leftover = [placeholder for placeholder in values if placeholder in js]
+    if leftover:
+        # 静默失败在这里最危险：脚本照跑，只是再也认不出验证墙
+        raise RuntimeError(f"DOM 探测脚本仍有未替换的占位符: {leftover}")
+    return js
+
+
+_DOM_PROBE_JS = _build_dom_probe_js()
 
 
 class ChallengeDetected(RuntimeError):

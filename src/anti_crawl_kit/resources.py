@@ -14,7 +14,7 @@
 
     ResourceBlocker.apply_to_page(page, whitelist_domains=["qrcode.example.com"])
 """
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 DEFAULT_BLOCKED_RESOURCE_TYPES = frozenset({"image", "media", "font"})
 
@@ -31,9 +31,9 @@ class ResourceBlocker:
 
     def __init__(
         self,
-        resource_types: Optional[Sequence[str]] = None,
-        extensions: Optional[Sequence[str]] = None,
-        whitelist_domains: Optional[Sequence[str]] = None,
+        resource_types: Sequence[str] | None = None,
+        extensions: Sequence[str] | None = None,
+        whitelist_domains: Sequence[str] | None = None,
     ):
         self.resource_types = frozenset(resource_types or DEFAULT_BLOCKED_RESOURCE_TYPES)
         self.extensions = frozenset(extensions or DEFAULT_BLOCKED_EXTENSIONS)
@@ -68,7 +68,7 @@ class ResourceBlocker:
     def apply_to_page(
         cls,
         page,
-        whitelist_domains: Optional[Sequence[str]] = None,
+        whitelist_domains: Sequence[str] | None = None,
     ) -> "ResourceBlocker":
         blocker = cls(whitelist_domains=whitelist_domains)
         blocker.apply(page)
@@ -77,7 +77,7 @@ class ResourceBlocker:
 
 def block_unnecessary_resources(
     page,
-    whitelist_domains: Optional[Sequence[str]] = None,
+    whitelist_domains: Sequence[str] | None = None,
 ) -> ResourceBlocker:
     """便捷别名。"""
     return ResourceBlocker.apply_to_page(page, whitelist_domains=whitelist_domains)

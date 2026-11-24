@@ -5,7 +5,6 @@ import html
 import re
 from decimal import Decimal, InvalidOperation
 
-
 # 中文计数单位；复合单位按出现顺序连乘，如 "万亿" = 10_000 × 100_000_000。
 _COUNT_UNITS: dict[str, int] = {
     "十": 10,

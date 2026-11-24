@@ -54,7 +54,7 @@ def main() -> int:
         {"title": "第4章", "content": NORMAL + "\ufffd" * 30},
     ]
     results = check_batch(items)
-    for item, quality in zip(items, results):
+    for item, quality in zip(items, results, strict=True):
         first = quality.reasons[0] if quality.reasons else "无问题"
         print(
             f"  {item['title']}: ok={quality.ok} "

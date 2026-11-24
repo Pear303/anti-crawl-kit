@@ -87,3 +87,27 @@ def test_health_init_delegates(tmp_path: Path, monkeypatch, capsys):
     assert init_main(["health"]) == 0
     assert (tmp_path / "ack_health.yaml").is_file()
     assert "配置模板" in capsys.readouterr().out
+
+
+def test_health_init_honors_out(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "nested" / "my_health.yaml"
+
+    assert init_main(["health", "--out", str(target)]) == 0
+
+    assert target.is_file()
+    assert "platforms" in target.read_text(encoding="utf-8")
+    out = capsys.readouterr().out
+    assert str(target) in out
+    assert "ack-health --config" in out
+
+
+def test_health_init_does_not_overwrite(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "keep.yaml"
+    target.write_text("已存在", encoding="utf-8")
+
+    assert init_main(["health", "--out", str(target)]) == 0
+
+    assert target.read_text(encoding="utf-8") == "已存在"
+    assert "未覆盖" in capsys.readouterr().out

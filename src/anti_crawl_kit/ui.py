@@ -468,7 +468,7 @@ def make_handler(service: UiService):
     class Handler(BaseHTTPRequestHandler):
         server_version = "ack-ui/1.0"
 
-        def log_message(self, fmt: str, *args: Any) -> None:  # noqa: A003
+        def log_message(self, fmt: str, *args: Any) -> None:
             # 默认不刷访问日志；排查时用 --verbose 打开。
             if getattr(self.server, "verbose", False):
                 super().log_message(fmt, *args)
@@ -493,7 +493,7 @@ def make_handler(service: UiService):
             self._json({"error": message}, status)
 
         # ── GET ──
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             parsed = urlparse(self.path)
             path = parsed.path
             query = parse_qs(parsed.query)
@@ -583,11 +583,11 @@ def make_handler(service: UiService):
 
         def _sse_write(self, event: dict[str, Any]) -> None:
             payload = json.dumps(event, ensure_ascii=False, default=str)
-            self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
+            self.wfile.write(f"data: {payload}\n\n".encode())
             self.wfile.flush()
 
         # ── POST ──
-        def do_POST(self) -> None:  # noqa: N802
+        def do_POST(self) -> None:
             parsed = urlparse(self.path)
             path = parsed.path
             try:

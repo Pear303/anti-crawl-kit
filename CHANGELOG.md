@@ -7,7 +7,54 @@
 
 ### 计划
 
-- 覆盖率基线统计；ruff 规则逐步扩到常规集合。
+- mypy 错误从 143 个逐步清零。
+
+## [0.15.0] - 2026-11-24
+
+### 新增
+
+- 覆盖率门槛：CI 新增 `coverage` job，`--cov-fail-under=70`；当前基线 71.6%
+  （9890 条语句）。`dev` extras 增加 `pytest-cov`。
+- `ack init health --out <路径>`：与 `ack init recipe|assess` 对齐，可指定输出
+  位置，已存在的文件默认不覆盖。
+- PR 门禁落地（`prctl`）：`.prctl/policy.yml`、五个 JSON Schema、
+  `.github/pull_request_template.md`、`.github/CODEOWNERS`、
+  `prctl-gate` / `prctl-risk` 工作流。高风险改动需要 2 次独立复核。
+- 8 个模块补齐离线测试：`resources`、`headers`、`strategy`、`risk`、`alive`、
+  `captcha`、`guard`、`user_agent`；`text` 补水印清洗、文件名安全、去重键。
+
+### 变更
+
+- ruff 规则从「只查运行错误」扩到常规集合 `E / F / W / I / UP / B / RUF100`：
+  自动修复 112 处，另外手工处理 74 处（66 处长行折行、8 处语义问题）。
+  `RUF100` 让无用的 `noqa` 也能被直接发现；本轮清掉了 8 处指向未启用规则的残留。
+  `ui_assets.py` 是唯一豁免 `E501` 的文件——它只放内嵌 HTML/CSS/JS。
+- `report.py` 的样式表移入 `ui_assets.py`（`REPORT_CSS`），报告与 UI 的内嵌
+  资源集中到一个模块，职责更清楚。
+- `captcha.py` / `challenge.py` 的 JS 模板从 `%` 格式化改成具名占位符 +
+  `.replace()`；`notify.py` 的 PowerShell 脚本改成 f-string 注入命名空间，
+  长行不再需要例外。
+- `ack init health` 现在会打印真实生成路径，而不是固定示例名。
+
+### 修复
+
+- `generic.py` 删除未使用的 `fields_payload`；循环变量 `field` 改名
+  `field_spec`，不再遮蔽 `dataclasses.field`。
+- `tools/doctor.py` 恢复 Python 版本检查：`sys.version_info < (3, 10)` 时返回
+  FAIL，源码直跑 3.9 不再出现「OK 3.9.0 (>= 3.10)」的假绿灯。
+- 门禁规则不能在同一 PR 里被改弱：`.prctl/policy.yml` 与 `.prctl/schemas/**`
+  列为 high；CI 检测到改动门禁规则时，会用 base 分支的 policy 重新分级并 gate，
+  锚点放在 `$RUNNER_TEMP` 并用显式开关判断，不看工作区文件是否存在。
+- `.prctl/artifacts/**` 归 low：证据产物每个 PR 都会提交，算 high 会让高风险
+  这个信号失去区分度。
+- `prctl` 的 `Policy.load` 增加 `strict`：显式指定的 `--policy` 不存在或为空时
+  直接报错，不再静默回落到内置默认规则。
+- 风险分级改用 `core.quotepath=false` 输出路径：中文文件名不再被八进制
+  转义，否则 `.github/workflows/**` 这类规则会匹配失败、高风险被降级。
+
+### 文档
+
+- 新增 `CONTRIBUTING.md`：本地门禁、证据包、审核轮次与风险分级。
 
 ## [0.14.0] - 2026-11-23
 

@@ -1,0 +1,67 @@
+# prctl policy: the single source of truth for gates.
+# Copy this file to .prctl/policy.yml in your target repo.
+
+version: 1
+
+review:
+  # 审核最多 3 轮；第 2 轮起只审增量。
+  max_rounds: 3
+  categories:
+    - goal
+    - compatibility
+    - impact
+  # 这些类别只记录数量，不作为审核意见。
+  noise_categories:
+    - style
+    - naming
+    - redundancy
+    - formatting
+  require_delta_after_round: 1
+  # P0 必须修复；P1/P2 可以说明、转后续或明确不修，但必须有 disposition_note。
+  blocking_severities:
+    - P0
+
+evidence:
+  require_screenshots: true
+  require_commands: true
+  require_rollback: true
+
+risk:
+  default_level: medium
+  approvals:
+    low: 0
+    medium: 1
+    high: 2
+  rules:
+    high:
+      - "billing/**"
+      - "payments/**"
+      - "auth/**"
+      - "security/**"
+      - "migrations/**"
+      - "infra/**"
+      - "deploy/**"
+      - ".github/workflows/**"
+      - "**/Dockerfile"
+      - "**/*.tf"
+    medium:
+      - "src/**"
+      - "packages/**"
+      - "apps/**"
+      - "services/**"
+    low:
+      - "docs/**"
+      - "*.md"
+      - "**/*.md"
+      - "tests/**"
+      - "**/*.test.*"
+      - "**/*.spec.*"
+
+release:
+  # 中风险和高风险必须有发布计划（开关 + 灰度 + 回滚）。
+  required_for_levels:
+    - medium
+    - high
+  require_flag: true
+  require_rollback: true
+  min_rollout_stages: 1

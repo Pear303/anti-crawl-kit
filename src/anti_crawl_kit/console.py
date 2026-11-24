@@ -26,7 +26,8 @@ from __future__ import annotations
 import builtins
 import re
 import sys
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 # 模块导入时先抓住原始 print，避免 install 后自我递归。
 _BUILTIN_PRINT = builtins.print

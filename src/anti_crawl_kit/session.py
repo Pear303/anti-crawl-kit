@@ -29,7 +29,6 @@ import signal
 import sys
 import threading
 import time
-from typing import Optional
 
 from .page import PageAdapter
 
@@ -125,8 +124,9 @@ def detect_edge_version() -> str | None:
 def detect_patchright_chromium() -> str | None:
     """读取 patchright 自带 browsers.json 中期望的 Chromium 版本。"""
     try:
-        import patchright
         from pathlib import Path
+
+        import patchright
 
         base = Path(patchright.__file__).resolve().parent
         for candidate in (
@@ -231,16 +231,16 @@ class BrowserSession:
     def __init__(
         self,
         headless: bool = False,
-        data_dir: Optional[str] = None,
-        viewport: Optional[dict] = None,
-        user_agent: Optional[str] = None,
+        data_dir: str | None = None,
+        viewport: dict | None = None,
+        user_agent: str | None = None,
         locale: str = "zh-CN",
         timezone: str = "Asia/Shanghai",
         stealth: bool = True,
-        proxy: Optional[dict] = None,
-        channel: Optional[str] = None,
+        proxy: dict | None = None,
+        channel: str | None = None,
         block_resources: bool = False,
-        resource_whitelist: Optional[list] = None,
+        resource_whitelist: list | None = None,
         cdp_endpoint: str = "",
         anti_crawl: bool = True,
         skip_version_check: bool = False,
@@ -265,11 +265,11 @@ class BrowserSession:
         self._browser = None
         self._context = None
         self._pw_page = None
-        self._page_adapter: Optional[PageAdapter] = None
+        self._page_adapter: PageAdapter | None = None
         self._atexit_registered = False
         self._browser_gone = False
         self._stop_watchdog = False
-        self._watchdog_thread: Optional[threading.Thread] = None
+        self._watchdog_thread: threading.Thread | None = None
 
     # ── 上下文管理 ───────────────────────────────────
     def __enter__(self) -> PageAdapter:
@@ -343,7 +343,9 @@ class BrowserSession:
             self._browser = self._playwright.chromium.connect_over_cdp(self._cdp_endpoint)
             if self._browser.contexts:
                 self._context = self._browser.contexts[0]
-                fit_viewport = self.viewport if self.headless else (self.viewport or DEFAULT_VIEWPORT)
+                fit_viewport = (
+                    self.viewport if self.headless else (self.viewport or DEFAULT_VIEWPORT)
+                )
                 for p in self._context.pages:
                     try:
                         p.set_viewport_size(fit_viewport)
@@ -656,7 +658,7 @@ class BrowserSession:
             if not os.path.isfile(prefs_path):
                 continue
             try:
-                with open(prefs_path, "r", encoding="utf-8") as f:
+                with open(prefs_path, encoding="utf-8") as f:
                     prefs = json.load(f)
                 partition = prefs.get("partition", {})
                 phzl = partition.get("per_host_zoom_levels", {})

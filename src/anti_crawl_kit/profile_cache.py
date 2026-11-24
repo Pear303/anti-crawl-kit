@@ -48,9 +48,9 @@ import json
 import os
 import shutil
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 # 白名单：只允许删这些相对路径（大小写不敏感，Windows/Linux 通用）。
 CACHE_DIRS: tuple[str, ...] = (
@@ -98,7 +98,8 @@ class PruneResult:
     """一次缓存清理的结果。"""
 
     profile: str
-    reason: str                     # pruned / below_threshold / throttled / dry_run / profile_missing / error
+    # pruned / below_threshold / throttled / dry_run / profile_missing / error
+    reason: str
     before_mb: float = 0.0
     after_mb: float = 0.0
     cache_mb: float = 0.0

@@ -32,9 +32,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "src"))
 
-from anti_crawl_kit.adaptive_selector import extract_features
-from anti_crawl_kit.captcha import detect_captcha_page
-from anti_crawl_kit.datasource import detect_waf
+# 直接运行脚本时要先把 src 放进 sys.path，再导入包内模块（E402 属预期）
+from anti_crawl_kit.adaptive_selector import extract_features  # noqa: E402
+from anti_crawl_kit.captcha import detect_captcha_page  # noqa: E402
+from anti_crawl_kit.datasource import detect_waf  # noqa: E402
 
 
 @dataclass(frozen=True)

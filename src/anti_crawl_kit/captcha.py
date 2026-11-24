@@ -27,8 +27,13 @@ _CAPTCHA_URL_KEYWORDS = ["captcha", "verify", "challenge", "slider"]
 # ── 平台专用 DOM 检测 JS 注册表 ─────────────────────────────
 _CSDN_CF_DETECT_JS = """(() => {
     var title = (document.title || '');
-    var titleKws = ['安全验证', '安全认证', 'Security', 'Just a moment', 'Attention', '请完成验证', 'Unusual traffic'];
-    for (var i = 0; i < titleKws.length; i++) { if (title.indexOf(titleKws[i]) !== -1) return { detected: true, reason: 'cf_title' }; }
+    var titleKws = [
+      '安全验证', '安全认证', 'Security', 'Just a moment',
+      'Attention', '请完成验证', 'Unusual traffic'
+    ];
+    for (var i = 0; i < titleKws.length; i++) {
+      if (title.indexOf(titleKws[i]) !== -1) return { detected: true, reason: 'cf_title' };
+    }
 
     var cfEl = document.querySelector(
         '#cf-challenge-running, .cf-browser-verification, .challenge-form, ' +
@@ -39,8 +44,14 @@ _CSDN_CF_DETECT_JS = """(() => {
     if (cfEl) return { detected: true, reason: 'cf_dom' };
 
     var body = (document.body && document.body.innerText) || '';
-    var bodyKws = ['安全验证', '安全认证', '请完成验证', '请进行安全验证', 'Checking your browser', 'needs to review the security', 'Performing a security check'];
-    for (var j = 0; j < bodyKws.length; j++) { if (body.indexOf(bodyKws[j]) !== -1) return { detected: true, reason: 'cf_body' }; }
+    var bodyKws = [
+      '安全验证', '安全认证', '请完成验证', '请进行安全验证',
+      'Checking your browser', 'needs to review the security',
+      'Performing a security check'
+    ];
+    for (var j = 0; j < bodyKws.length; j++) {
+      if (body.indexOf(bodyKws[j]) !== -1) return { detected: true, reason: 'cf_body' };
+    }
 
     return { detected: false };
 })()"""
@@ -58,7 +69,8 @@ _ZHIHU_CAPTCHA_DETECT_JS = (
     "  }"
     "  var el;"
     "  el = document.querySelector('.Captcha-englishContainer');"
-    "  if (el && vis(el)) return { detected: true, reason: 'captcha_dom:Captcha-englishContainer' };"
+    "  if (el && vis(el)) return { detected: true, "
+    "reason: 'captcha_dom:Captcha-englishContainer' };"
     "  el = document.querySelector('.SignFlow-verifyCode');"
     "  if (el && vis(el)) return { detected: true, reason: 'captcha_dom:SignFlow-verifyCode' };"
     "  var t = (document.title || '');"
@@ -78,9 +90,11 @@ _BAIJIAHAO_CAPTCHA_DETECT_JS = (
     "    return true;"
     "  }"
     "  var t = (document.title || '');"
-    "  if (t.indexOf('百度安全验证') !== -1 || t.indexOf('百度安全') !== -1) return { detected: true, reason: 'baijiahao_title' };"
+    "  if (t.indexOf('百度安全验证') !== -1 || t.indexOf('百度安全') !== -1) "
+    "return { detected: true, reason: 'baijiahao_title' };"
     "  var body = (document.body && document.body.innerText) || '';"
-    "  if (body.indexOf('百度安全验证') !== -1 || body.indexOf('请完成下方验证后继续操作') !== -1) {"
+    "  if (body.indexOf('百度安全验证') !== -1 "
+    "|| body.indexOf('请完成下方验证后继续操作') !== -1) {"
     "    return { detected: true, reason: 'baijiahao_body' };"
     "  }"
     "  var el;"
@@ -101,10 +115,12 @@ _GEETEST_CAPTCHA_DETECT_JS = (
     "    return true;"
     "  }"
     "  var el;"
-    "  el = document.querySelector('.geetest_widget, .geetest_panel, .geetest_holder, .geetest_slider');"
+    "  el = document.querySelector('.geetest_widget, .geetest_panel, "
+    ".geetest_holder, .geetest_slider');"
     "  if (el && vis(el)) return { detected: true, reason: 'geetest_dom' };"
     "  var body = (document.body && document.body.innerText) || '';"
-    "  if (body.indexOf('拖动滑块') !== -1 || body.indexOf('向右滑动') !== -1 || body.indexOf('完成拼图') !== -1) {"
+    "  if (body.indexOf('拖动滑块') !== -1 || body.indexOf('向右滑动') !== -1 "
+    "|| body.indexOf('完成拼图') !== -1) {"
     "    return { detected: true, reason: 'geetest_body' };"
     "  }"
     "  return { detected: false };"

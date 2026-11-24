@@ -1,0 +1,54 @@
+name: prctl-risk
+
+# 按 .prctl/policy.yml 的路径规则给 PR 打 risk:low/medium/high 标签。
+# 就高不就低：命中任意一条高风险就算高风险。
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install prctl
+        run: python -m pip install --quiet -e ./prctl
+      - name: Classify changed files
+        id: risk
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          git fetch origin "$BASE_REF"
+          git -c core.quotepath=false diff --name-only "origin/$BASE_REF...HEAD" > changed.txt
+          prctl risk --pr "$PR_NUMBER" --files-from changed.txt
+          LEVEL=$(python -c "import json; print(json.load(open('.prctl/artifacts/$PR_NUMBER/risk.json'))['level'])")
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "risk:low" --color 0E8A16 2>/dev/null || true
+          gh label create "risk:medium" --color FBCA04 2>/dev/null || true
+          gh label create "risk:high" --color D93F0B 2>/dev/null || true
+      - name: Apply label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          for label in risk:low risk:medium risk:high; do
+            gh pr edit "$PR_NUMBER" --remove-label "$label" >/dev/null 2>&1 || true
+          done
+          gh pr edit "$PR_NUMBER" --add-label "risk:${{ steps.risk.outputs.level }}"

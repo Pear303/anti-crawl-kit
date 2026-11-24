@@ -28,9 +28,11 @@ import hashlib
 import json
 import re
 import time
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
+from typing import Any
+
 from ._compat import StrEnum
-from typing import Any, Iterable, Mapping
 
 
 class CookieState(StrEnum):

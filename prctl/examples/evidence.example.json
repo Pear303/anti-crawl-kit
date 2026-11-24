@@ -1,0 +1,58 @@
+{
+  "goal": "Add per-seat billing calculation for the team plan",
+  "ui_change": true,
+  "acceptance_criteria": [
+    {
+      "criterion": "Team plan invoice uses the seat count",
+      "result": "PASS",
+      "evidence": "billing/tests/test_invoice.py::test_team_plan_seats"
+    },
+    {
+      "criterion": "Existing individual plan is unchanged",
+      "result": "PASS",
+      "evidence": "billing/tests/test_invoice.py::test_individual_plan_regression"
+    }
+  ],
+  "commands": [
+    {
+      "command": "pytest billing/tests -q",
+      "output": "12 passed in 3.2s"
+    },
+    {
+      "command": "npm run build",
+      "output": "built in 8.4s"
+    }
+  ],
+  "run_evidence": {
+    "start_command": "docker compose up -d && npm run dev",
+    "screenshots": [
+      "artifacts/screenshots/invoice-team-plan.png"
+    ],
+    "logs": [
+      "artifacts/logs/billing-smoke.log"
+    ]
+  },
+  "impact": {
+    "affected_modules": [
+      "billing",
+      "invoice"
+    ],
+    "compatibility": "Existing individual plan path is unchanged; the team plan uses a new code path.",
+    "risk_notes": "Touches billing; requires 2 approvals and a feature flag."
+  },
+  "security": {
+    "secrets": "No new secrets; existing environment variables are reused.",
+    "input_validation": "Seat count is validated as a positive integer.",
+    "authz": "Only workspace admins can change the seat count.",
+    "dependencies": "No dependency changes."
+  },
+  "rollback": {
+    "flag": "billing.team-plan-seats",
+    "steps": [
+      "Turn off billing.team-plan-seats",
+      "Confirm invoices fall back to the legacy calculation"
+    ],
+    "verification": "billing.error_rate < 0.1% and invoice diff is zero for 10 minutes",
+    "data_reversible": true
+  }
+}
