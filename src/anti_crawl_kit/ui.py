@@ -583,7 +583,7 @@ def make_handler(service: UiService):
 
         def _sse_write(self, event: dict[str, Any]) -> None:
             payload = json.dumps(event, ensure_ascii=False, default=str)
-            self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
+            self.wfile.write(f"data: {payload}\n\n".encode())
             self.wfile.flush()
 
         # ── POST ──

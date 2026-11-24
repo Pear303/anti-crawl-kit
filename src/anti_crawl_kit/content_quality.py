@@ -22,8 +22,9 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 DEFAULT_AD_KEYWORDS: tuple[str, ...] = (
     "请记住本站",

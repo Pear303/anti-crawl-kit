@@ -32,9 +32,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "src"))
 
-from anti_crawl_kit.adaptive_selector import extract_features
-from anti_crawl_kit.captcha import detect_captcha_page
-from anti_crawl_kit.datasource import detect_waf
+from anti_crawl_kit.adaptive_selector import extract_features  # noqa: E402
+from anti_crawl_kit.captcha import detect_captcha_page  # noqa: E402
+from anti_crawl_kit.datasource import detect_waf  # noqa: E402
 
 
 @dataclass(frozen=True)

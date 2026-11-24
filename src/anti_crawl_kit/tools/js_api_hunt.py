@@ -209,7 +209,10 @@ def main(argv: list[str] | None = None) -> int:
         "--browser",
         choices=("never", "auto", "always"),
         default="auto",
-        help="用浏览器枚举页面实际加载的 JS：auto=静态发现≤2 个时自动；always=总是；never=只用 HTTP",
+        help=(
+            "用浏览器枚举页面实际加载的 JS："
+            "auto=静态发现≤2 个时自动；always=总是；never=只用 HTTP"
+        ),
     )
     parser.add_argument(
         "--headed",

@@ -1,0 +1,30 @@
+{
+  "level": "high",
+  "approvals": 2,
+  "matched": [
+    {
+      "file": ".github/workflows/ci.yml",
+      "level": "high",
+      "patterns": [
+        ".github/workflows/**"
+      ]
+    },
+    {
+      "file": "pyproject.toml",
+      "level": "medium",
+      "patterns": []
+    },
+    {
+      "file": "src/anti_crawl_kit/report.py",
+      "level": "medium",
+      "patterns": []
+    },
+    {
+      "file": "tests/test_risk.py",
+      "level": "low",
+      "patterns": [
+        "tests/**"
+      ]
+    }
+  ]
+}

@@ -17,7 +17,6 @@ from anti_crawl_kit.health import (
 )
 from anti_crawl_kit.tools import health_cli
 
-
 COLLECTOR_SRC = '''
 class DemoCollector:
     entry_param = "uid"

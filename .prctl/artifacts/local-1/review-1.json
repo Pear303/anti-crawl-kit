@@ -1,0 +1,57 @@
+{
+  "pr": "local-1",
+  "round": 1,
+  "context": "fresh",
+  "conclusion": "pass",
+  "findings": [
+    {
+      "id": "R-001",
+      "severity": "P1",
+      "category": "compatibility",
+      "file": "src/anti_crawl_kit/text.py",
+      "line": 16,
+      "problem": "parse_count 不再容忍数字与单位之间的空白/NBSP：'1.2 亿'、'1.2\\u00a0亿'、'2399.2 万' 由旧版正确值变为 0；'1 234万' 由 12,340,000 变为 2,340,000（只匹配尾部 234万）。normalize_count 因先去空白不受影响，但 generic.py:495 的 transform=\"count\" 直接调用 parse_count，从 HTML 提取的含空白文本会静默丢数或错数。",
+      "evidence": "实测（PYTHONPATH=src）：parse_count('1.2 亿')=0（旧版 120000000）；parse_count('1.2\\u00a0亿')=0（旧版 120000000）；parse_count('2399.2 万')=0（旧版 23992000）；parse_count('1 234万')=2340000（旧版 12340000）；normalize_count 对上述输入均返回正确值。旧版取自 git show HEAD:src/anti_crawl_kit/text.py。",
+      "disposition": "deferred",
+      "disposition_note": "建议 parse_count 与 normalize_count 共用空白清理（覆盖 \\s、NBSP、U+3000），或在正则中允许数字与单位间 \\s*；并补充空白分隔回归测试。本轮未修改代码。"
+    },
+    {
+      "id": "R-002",
+      "severity": "P1",
+      "category": "goal",
+      "file": "src/anti_crawl_kit/text.py",
+      "line": 31,
+      "problem": "正则 findall 对段间分隔符不设任何约束，任意文本或标点都会触发多段累加，与 docstring '段之间允许零和空白' 的契约不一致，会把同一字符串里的无关计数相加：'销量2亿，营收3万' 得 200,030,000，'5万～10万' 得 150,000，'2亿-3万' 得 200,030,000。normalize_count 同样受影响。",
+      "evidence": "实测：parse_count('销量2亿，营收3万')=200030000；parse_count('5万～10万')=150000；parse_count('2亿-3万')=200030000；normalize_count 返回相同错误值。text.py:22-25 声明段间只允许'零'和空白，但实现仅用 findall 收集全部分段，未校验分隔符。",
+      "disposition": "deferred",
+      "disposition_note": "建议把段间分隔限定为'零'或空白（或显式更新契约并在调用侧限制输入），并补充多计数文本、区间文本的负向测试。"
+    },
+    {
+      "id": "R-003",
+      "severity": "P2",
+      "category": "impact",
+      "file": "src/anti_crawl_kit/text.py",
+      "line": 35,
+      "problem": "int(float(num_str) * multiplier) 向下取整会使小数单位计数少 1：'1.13万'→11299、'1.13亿'→112999999、'2.03百'→202、'1.15百'→114。万/亿路径旧版已有同样偏差，新增的百/千路径继承该缺陷；9999万亿本身经核验精确（9,999,000,000,000,000），不存在该量级的 float 误差。",
+      "evidence": "实测：parse_count('1.13万')=11299（应为 11300）；parse_count('1.13亿')=112999999（应为 113000000）；parse_count('2.03百')=202（旧版 0）；parse_count('1.15百')=114（旧版 0）。按 Decimal 精确值抽样 1.000-1.999 两位/三位小数：万 62/999、亿 63/999 偏差 1；百 4/999、千 12/999。另 int(float('9999')*10**12) == 9999*10**12 为 True。",
+      "disposition": "deferred",
+      "disposition_note": "建议小数路径改用 Decimal 或先按数值精度四舍五入（整数路径不受影响），并补充小数精度回归测试；非阻塞，但会造成计数少 1。"
+    },
+    {
+      "id": "R-004",
+      "severity": "P2",
+      "category": "goal",
+      "file": "tests/test_text.py",
+      "line": 9,
+      "problem": "新增测试完整覆盖 5 组验收复合单位与全部列出的既有回归用例（共 28 个），但未覆盖本次实际发生回归的空白/NBSP 分隔、任意分隔符累加、以及小数 float 截断边界，无法防止 R-001～R-003 复发。",
+      "evidence": "tests/test_text.py 的 COMPOUND_CASES、PARSE_COUNT_REGRESSION_CASES、NORMALIZE_COUNT_REGRESSION_CASES 共 28 个用例，输入均为无空格或仅 1-2 位小数；'1.2 亿'、'1.2\\u00a0亿'、'1 234万'、'1.13万'、'5万～10万' 均未出现。",
+      "disposition": "deferred",
+      "disposition_note": "建议补充上述边界用例作为回归测试。"
+    }
+  ],
+  "filtered": {
+    "style": 0,
+    "redundancy": 0,
+    "other": 0
+  }
+}

@@ -1,0 +1,65 @@
+# prctl policy：门禁的唯一事实来源。
+# 本项目是 Python 库 + CLI，没有服务端和数据库，路径按实际结构调整过。
+
+version: 1
+
+review:
+  # 审核最多 3 轮；第 2 轮起只审增量。
+  max_rounds: 3
+  categories:
+    - goal
+    - compatibility
+    - impact
+  # 这些类别只记录数量，不作为审核意见。
+  noise_categories:
+    - style
+    - naming
+    - redundancy
+    - formatting
+  require_delta_after_round: 1
+  # P0 必须修复；P1/P2 可以说明、转后续或明确不修，但必须有 disposition_note。
+  blocking_severities:
+    - P0
+
+evidence:
+  require_screenshots: true
+  require_commands: true
+  require_rollback: true
+
+risk:
+  default_level: medium
+  approvals:
+    low: 0
+    medium: 1
+    # 单人项目：2 次独立复核（换全新上下文的 Agent），不是两个不同的人。
+    high: 2
+  rules:
+    high:
+      # 发版流水线、门禁自身、打包脚本：改错会直接影响发布
+      - ".github/workflows/**"
+      - "prctl/**"
+      - "scripts/**"
+      - "**/Dockerfile"
+    medium:
+      # 库代码、依赖清单、示例（示例会被用户直接复制）
+      - "src/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - "requirements.txt"
+      - "benchmarks/**"
+    low:
+      - "docs/**"
+      - "*.md"
+      - "**/*.md"
+      - "tests/**"
+      - "**/*.test.*"
+      - "**/*.spec.*"
+
+release:
+  # 中风险和高风险必须有发布计划（库项目用 version + 包仓库阶段）。
+  required_for_levels:
+    - medium
+    - high
+  require_flag: true
+  require_rollback: true
+  min_rollout_stages: 1

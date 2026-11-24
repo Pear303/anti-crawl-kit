@@ -14,9 +14,10 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from typing import Any, Iterable
+from typing import Any
 
 _VOID_TAGS = {
     "area", "base", "br", "col", "embed", "hr", "img", "input",
@@ -28,7 +29,7 @@ _VOID_TAGS = {
 class Node:
     tag: str
     attrs: dict[str, str] = field(default_factory=dict)
-    children: list["Node"] = field(default_factory=list)
+    children: list[Node] = field(default_factory=list)
     text_parts: list[str] = field(default_factory=list)
 
 

@@ -63,12 +63,12 @@ import os
 import re
 import time
 import uuid
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any
 from urllib.parse import urlparse
-
 
 # ── 数据模型 ─────────────────────────────────────────
 
@@ -121,7 +121,7 @@ class StepRun:
         }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "StepRun":
+    def from_dict(cls, data: Mapping[str, Any]) -> StepRun:
         return cls(
             id=str(data.get("id", "")),
             uses=str(data.get("uses", "")),
@@ -163,7 +163,7 @@ class RecipeRun:
         }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "RecipeRun":
+    def from_dict(cls, data: Mapping[str, Any]) -> RecipeRun:
         return cls(
             run_id=str(data.get("run_id", "")),
             recipe_id=str(data.get("recipe_id", "")),
@@ -228,7 +228,7 @@ class Recipe:
         }
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "Recipe":
+    def from_dict(cls, data: Mapping[str, Any]) -> Recipe:
         steps: list[Step] = []
         for raw in data.get("steps") or []:
             if not isinstance(raw, Mapping):

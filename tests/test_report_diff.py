@@ -19,7 +19,11 @@ def _health(fail: bool = False) -> dict:
 def _smoke(status: str) -> dict:
     return {
         "finished_at": "2026-11-13 08:00:00",
-        "summary": {"PASS": 1 if status == "PASS" else 0, "FAIL": 1 if status == "FAIL" else 0, "SKIP": 0},
+        "summary": {
+            "PASS": 1 if status == "PASS" else 0,
+            "FAIL": 1 if status == "FAIL" else 0,
+            "SKIP": 0,
+        },
         "results": [{"name": "books", "kind": "http", "status": status}],
     }
 

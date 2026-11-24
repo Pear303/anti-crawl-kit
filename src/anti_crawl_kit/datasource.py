@@ -35,9 +35,11 @@ from __future__ import annotations
 import os
 import re
 import time
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
+from typing import Any
+
 from ._compat import StrEnum
-from typing import Any, Callable, Iterable, Sequence
 
 # 这些失败回退没有意义：风控/限流时换一层大概率还是被拦
 NO_FALLBACK_RISKS = frozenset({"blocked", "rate_limited", "captcha"})
@@ -411,7 +413,11 @@ def fetch_with_fallback(
     if not attempts:
         return _finish(False, "", [], StopReason.NO_FETCHER)
     last = attempts[-1]
-    reason = StopReason.EMPTY if last.get("risk") == "empty" else str(last.get("risk") or StopReason.UNKNOWN)
+    reason = (
+        StopReason.EMPTY
+        if last.get("risk") == "empty"
+        else str(last.get("risk") or StopReason.UNKNOWN)
+    )
     return _finish(
         False,
         str(last.get("source") or ""),

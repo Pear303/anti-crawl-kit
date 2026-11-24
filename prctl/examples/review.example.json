@@ -1,0 +1,24 @@
+{
+  "pr": "123",
+  "round": 1,
+  "context": "fresh",
+  "conclusion": "pass",
+  "findings": [
+    {
+      "id": "R-001",
+      "severity": "P2",
+      "category": "impact",
+      "file": "billing/calculator.py",
+      "line": 42,
+      "problem": "The new seat-count branch does not log the fallback path.",
+      "evidence": "billing/calculator.py:42; no log line in the new branch.",
+      "disposition": "fixed",
+      "disposition_note": "Added a debug log and a regression test."
+    }
+  ],
+  "filtered": {
+    "style": 3,
+    "redundancy": 1,
+    "other": 0
+  }
+}

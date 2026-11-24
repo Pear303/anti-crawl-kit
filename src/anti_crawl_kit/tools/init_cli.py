@@ -169,7 +169,8 @@ def _build_parser() -> argparse.ArgumentParser:
     recipe.add_argument("--out", default="", help="输出路径；默认按类型命名")
     recipe.add_argument("--force", action="store_true", help="覆盖已存在的文件")
 
-    sub.add_parser("health", help="生成健康体检模板（等价 ack-health --init）")
+    health = sub.add_parser("health", help="生成健康体检模板（等价 ack-health --init）")
+    health.add_argument("--out", default="", help="输出路径；默认 ack_health.yaml")
 
     assess = sub.add_parser("assess", help="从 DOM 探测结果生成评估配置")
     assess.add_argument(
@@ -283,7 +284,10 @@ def main(argv: list[str] | None = None) -> int:
 
     from .health_cli import main as health_main
 
-    return health_main(["--init"])
+    health_args = ["--init"]
+    if getattr(args, "out", ""):
+        health_args += ["--out", args.out]
+    return health_main(health_args)
 
 
 if __name__ == "__main__":

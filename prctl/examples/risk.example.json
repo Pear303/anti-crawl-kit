@@ -1,0 +1,13 @@
+{
+  "level": "high",
+  "approvals": 2,
+  "matched": [
+    {
+      "file": "billing/calculator.py",
+      "level": "high",
+      "patterns": [
+        "billing/**"
+      ]
+    }
+  ]
+}

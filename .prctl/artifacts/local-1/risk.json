@@ -1,0 +1,18 @@
+{
+  "level": "medium",
+  "approvals": 1,
+  "matched": [
+    {
+      "file": "src/anti_crawl_kit/text.py",
+      "level": "medium",
+      "patterns": []
+    },
+    {
+      "file": "tests/test_text.py",
+      "level": "low",
+      "patterns": [
+        "tests/**"
+      ]
+    }
+  ]
+}

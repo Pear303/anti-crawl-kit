@@ -74,7 +74,9 @@ def test_evaluate_closed_message_means_closed() -> None:
 
 def test_evaluate_other_error_is_conservatively_alive() -> None:
     # 导航期间会抛 Execution context was destroyed，窗口其实还活着
-    page = Page(evaluate_error="Execution context was destroyed, most likely because of a navigation")
+    page = Page(
+        evaluate_error="Execution context was destroyed, most likely because of a navigation"
+    )
     assert is_page_closed(page) is False
 
 

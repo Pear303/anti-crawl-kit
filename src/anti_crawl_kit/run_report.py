@@ -37,10 +37,11 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 # stop_reason 命中这些值说明任务被外部因素硬停，不是「跑完了但结果少」。
 _BLOCKED_REASONS = frozenset(
@@ -181,7 +182,7 @@ class RunReport:
         return self.status == "ok"
 
     # ── 序列化 ──
-    def finish(self) -> "RunReport":
+    def finish(self) -> RunReport:
         self.finished_at = _now()
         return self
 
@@ -234,7 +235,7 @@ class RunReport:
         actual_count: int | None = None,
         degraded_reasons: Iterable[str] | None = None,
         source_strategy: str = "",
-    ) -> "RunReport":
+    ) -> RunReport:
         rows: list[dict[str, Any]] = []
         for item in outcomes:
             if isinstance(item, dict):

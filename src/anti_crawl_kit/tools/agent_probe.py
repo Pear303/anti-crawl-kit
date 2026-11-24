@@ -511,7 +511,11 @@ def main(argv: list[str] | None = None) -> int:
                     "path": item.value,
                     "source": item.source,
                     "context": item.context[:200],
-                    "score": 1.0 if args.field and args.field.lower() in item.context.lower() else 0.6,
+                    "score": (
+                        1.0
+                        if args.field and args.field.lower() in item.context.lower()
+                        else 0.6
+                    ),
                 }
             )
         candidates.sort(key=lambda c: (-c["score"], len(c["url"])))
@@ -612,7 +616,8 @@ def _emit(payload: dict, args, *, exit_code: int | None = None) -> int:
         print(text)
     else:
         print(f"[{payload['decision']}] {payload['summary']}")
-        print(f"置信度: {payload['confidence']}  |  标题: {payload['evidence'].get('title', '')[:60]}")
+        title = payload["evidence"].get("title", "")[:60]
+        print(f"置信度: {payload['confidence']}  |  标题: {title}")
         if payload["candidates"]:
             print("\n候选接口:")
             for item in payload["candidates"][:5]:

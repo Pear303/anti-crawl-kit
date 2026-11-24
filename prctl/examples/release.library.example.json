@@ -1,0 +1,30 @@
+{
+  "pr": "local-1",
+  "release_type": "library",
+  "version": "0.14.1",
+  "rollout": [
+    {
+      "stage": "testpypi",
+      "percentage": 100,
+      "soak_hours": 24
+    },
+    {
+      "stage": "pypi",
+      "percentage": 100,
+      "soak_hours": 168
+    }
+  ],
+  "rollback": {
+    "steps": [
+      "Yank 0.14.1 from the package index",
+      "Revert the commit on the release branch",
+      "Publish 0.14.0 as the previous good version"
+    ],
+    "verification": "python -m pytest tests -q passes on the reverted commit"
+  },
+  "monitoring": [
+    "pytest suite",
+    "issue tracker",
+    "downstream import smoke test"
+  ]
+}

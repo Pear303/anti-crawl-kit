@@ -6,7 +6,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 # 数字越大越差。未知状态按 WARN 处理，避免把「不认识」误判成通过。
 _STATUS_RANK = {
@@ -157,7 +158,13 @@ def _items(data: Mapping[str, Any], kind: str) -> list[tuple[str, str, str]]:
         if kind == "health":
             dimension = str(row.get("dimension") or "-")
             platform = str(row.get("platform") or "-")
-            items.append((f"{dimension}:{platform}", f"{dimension} · {platform}", str(row.get("status") or "-")))
+            items.append(
+                (
+                    f"{dimension}:{platform}",
+                    f"{dimension} · {platform}",
+                    str(row.get("status") or "-"),
+                )
+            )
         else:
             key = str(row.get("name") or "-")
             items.append((key, key, str(row.get("status") or "-")))
@@ -266,8 +273,14 @@ def diff_reports(
             }
         )
 
-    before_metrics = {key: (label, value, direction) for key, label, value, direction in _metrics(baseline, kind)}
-    after_metrics = {key: (label, value, direction) for key, label, value, direction in _metrics(current, kind)}
+    before_metrics = {
+        key: (label, value, direction)
+        for key, label, value, direction in _metrics(baseline, kind)
+    }
+    after_metrics = {
+        key: (label, value, direction)
+        for key, label, value, direction in _metrics(current, kind)
+    }
     metrics = []
     for key in dict.fromkeys([*before_metrics.keys(), *after_metrics.keys()]):
         before = before_metrics.get(key)

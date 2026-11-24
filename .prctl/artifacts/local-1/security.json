@@ -1,0 +1,30 @@
+{
+  "pr": "local-1",
+  "round": 2,
+  "context": "delta",
+  "conclusion": "pass",
+  "findings": [
+    {
+      "id": "SEC-001",
+      "severity": "medium",
+      "category": "denial-of-service",
+      "location": "src/anti_crawl_kit/text.py:19,22,39-40,77-78 (_COUNT_SEGMENT_RE 可空单位组 / _MAX_COUNT_TEXT_LEN 长度上限)",
+      "problem": "第 1 轮：新正则对\"超长数字段 + 单位\"呈 O(n²)，parse_count('1'*20000+'a'+'万') 约 11s，可被不可信页面文本放大为 CPU DoS。",
+      "evidence": "第 2 轮独立复测（Python 3.10，PYTHONPATH=src）：parse_count('1'*20000+'a'+'万') = 0，耗时 2.343ms（第 1 轮同输入 11.27s）；parse_count('1'*1001) = 0，0.030ms。1000 字符内 ReDoS 探针：'1'*999+'.'、'1'*500+'.'+'1'*499、'.'*1000、'1.'*500、'万'*1000、'1万'*333、'1'*500+'万'+'1'*499、'亿'*8+'1'*992 全部 ≤2.5ms。随机/Unicode 模糊共 5000 条（长度 0–2000，含数字、单位、小数点、零宽、控制符）零异常。5MB 超长输入 138ms，呈线性。修复机制：单位组改为可空 `[十百千万亿]*` 使 finditer 每个数字段只匹配一次，并在解析前对清洗后文本施加 1000 字符上限（parse_count 与 _parse_unit_count 双重检查）。",
+      "fix": "已实施输入长度上限 _MAX_COUNT_TEXT_LEN=1000 且正则单位组可空，消除逐起点回溯；独立复测确认线性、毫秒级返回。",
+      "status": "fixed",
+      "disposition_note": "第 2 轮独立计时与探针证明 O(n²) 路径已消除，长度上限生效，沿用 finding id 记录闭环。"
+    },
+    {
+      "id": "SEC-002",
+      "severity": "medium",
+      "category": "input-validation",
+      "location": "src/anti_crawl_kit/text.py:23,49,55-62 (_MAX_UNIT_RUN_LEN=8 / _parse_unit_count 的 Decimal 计算路径)",
+      "problem": "第 1 轮：单位捕获组重复次数无上限，parse_count('9'+'亿'*40) 经 float 相乘抛未捕获 OverflowError，可使采集任务崩溃；长单位串还有大整数 CPU 放大。",
+      "evidence": "第 2 轮独立复测：parse_count('9'+'亿'*40) = 0，耗时 0.219ms，无异常；normalize_count('9'+'亿'*40) = None，0.135ms，无异常。单位串上限生效：'1'+'亿'*9 → 0（跳过）；'1'+'亿'*8 → 10^64 正常（multiplier 上限 1e64）。数值计算改用 Decimal，无 float 转换；'9'*992+'亿'*8（1000 字符上限内最坏组合）0.128ms 返回，无 OverflowError。5000 条模糊输入零异常，无异常外泄至 generic.py::_postprocess 的 parse_count 调用点（generic.py:495）。",
+      "fix": "已实施 _MAX_UNIT_RUN_LEN=8 单位串上限（超限段跳过），并用 Decimal 相乘替代 int(float(...)*multiplier)，消除 float 溢出路径。",
+      "status": "fixed",
+      "disposition_note": "第 2 轮独立复测确认重复单位与超长数字均不抛异常且快速返回，沿用 finding id 记录闭环。"
+    }
+  ]
+}

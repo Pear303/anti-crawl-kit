@@ -27,8 +27,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 _TYPES = {"string", "int", "float", "bool", "list", "dict", "any"}
 
@@ -71,7 +72,7 @@ class FieldSpec:
     nullable: bool = False
 
     @classmethod
-    def from_dict(cls, name: str, data: Mapping[str, Any] | None) -> "FieldSpec":
+    def from_dict(cls, name: str, data: Mapping[str, Any] | None) -> FieldSpec:
         data = dict(data or {})
         field_type = str(data.get("type", "any"))
         if field_type not in _TYPES:
@@ -97,7 +98,7 @@ class DataContract:
     max_missing_ratio: float = 0.0
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "DataContract":
+    def from_dict(cls, data: Mapping[str, Any]) -> DataContract:
         raw_fields = data.get("fields") or {}
         fields: list[FieldSpec] = []
         if isinstance(raw_fields, Mapping):

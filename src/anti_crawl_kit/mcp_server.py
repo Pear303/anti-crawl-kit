@@ -30,22 +30,25 @@ import sys
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urlparse
 
-from .console import redact_mapping
 from .browser_pool import BrowserPool
+from .console import redact_mapping
 from .recipe import (
     Recipe,
-    list_recipes as _list_recipes,
     list_steps,
     load_recipe,
     resume_recipe,
     run_recipe,
+)
+from .recipe import (
+    list_recipes as _list_recipes,
 )
 
 

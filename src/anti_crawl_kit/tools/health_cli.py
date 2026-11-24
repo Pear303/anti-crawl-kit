@@ -79,6 +79,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--html", type=str, default="", help="落盘单文件 HTML 报告")
     parser.add_argument("--strict", action="store_true", help="WARN 也返回退出码 1")
     parser.add_argument("--init", action="store_true", help="生成配置模板 ack_health.yaml")
+    parser.add_argument("--out", type=str, default="", help="配合 --init：模板输出路径")
     parser.add_argument("--wait-ms", type=int, default=3000, help="动态探针等待渲染毫秒数")
     parser.add_argument("--timeout", type=int, default=30000, help="动态探针导航超时毫秒数")
     return parser
@@ -103,15 +104,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.init:
-        path = Path("ack_health.yaml")
+        path = Path(args.out or "ack_health.yaml")
         if path.exists():
             print(f"[WARN] 配置已存在，未覆盖: {path}")
             return 0
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(_TEMPLATE, encoding="utf-8")
         print(f"[OK] 已生成配置模板: {path}")
         print("[WARN] 这是 demo 模板，直接运行会 FAIL（模块/类名/cookie 名都还是示例值）。")
         print("[INFO] 先把 platforms 里的模块、类名、cookie 名、选择器改成你的项目，再运行:")
-        print("       ack-health --config ack_health.yaml")
+        print(f"       ack-health --config {path}")
         return 0
 
     config_path = Path(args.config) if args.config else _find_default_config()

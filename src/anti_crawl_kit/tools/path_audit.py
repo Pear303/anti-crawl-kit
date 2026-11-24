@@ -47,10 +47,11 @@ import json
 import os
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from ..empty_shell import detect_empty_shell
 from ..http_signed import SignedEndpoint, classify_signed_response
@@ -300,7 +301,7 @@ class PathResult:
         }
 
 
-def _base_result(config: "AuditConfig", spec: PathSpec) -> PathResult:
+def _base_result(config: AuditConfig, spec: PathSpec) -> PathResult:
     return PathResult(
         platform=config.platform,
         test_url=config.test_url,
@@ -312,7 +313,7 @@ def _base_result(config: "AuditConfig", spec: PathSpec) -> PathResult:
 
 
 def _not_tested(
-    config: "AuditConfig", spec: PathSpec, note: str
+    config: AuditConfig, spec: PathSpec, note: str
 ) -> PathResult:
     result = _base_result(config, spec)
     result.stop_reason = "not_tested"
@@ -352,7 +353,7 @@ class AuditEndpoint:
     signature_required: bool = False
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AuditEndpoint":
+    def from_dict(cls, data: dict[str, Any]) -> AuditEndpoint:
         return cls(
             name=str(data.get("name") or data.get("url") or "endpoint"),
             url=str(data["url"]),
@@ -430,7 +431,7 @@ class AuditConfig:
         return [endpoint for endpoint in self.endpoints if endpoint.path == path]
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AuditConfig":
+    def from_dict(cls, data: dict[str, Any]) -> AuditConfig:
         browser = dict(data.get("browser") or {})
         config = cls(
             platform=str(data.get("platform") or "unknown"),
@@ -787,23 +788,33 @@ def _probe_http_endpoints(
     return result
 
 
-def _probe_anonymous_json(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_anonymous_json(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     return _probe_http_endpoints(config, spec, browser_mode=browser_mode)
 
 
-def _probe_anonymous_graphql(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_anonymous_graphql(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     return _probe_http_endpoints(config, spec, browser_mode=browser_mode)
 
 
-def _probe_mobile_api(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_mobile_api(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     return _probe_http_endpoints(config, spec, browser_mode=browser_mode)
 
 
-def _probe_login_http(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_login_http(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     return _probe_http_endpoints(config, spec, browser_mode=browser_mode)
 
 
-def _probe_signature_replay(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_signature_replay(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     return _probe_http_endpoints(config, spec, browser_mode=browser_mode)
 
 
@@ -858,19 +869,25 @@ def _probe_html_page(
     return result
 
 
-def _probe_anonymous_html(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_anonymous_html(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     return _probe_html_page(
         config, spec, config.test_url, use_cookies=config.html_use_cookies
     )
 
 
-def _probe_share_ssr(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_share_ssr(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     return _probe_html_page(
         config, spec, config.share_url, use_cookies=config.html_use_cookies
     )
 
 
-def _probe_ssr_state(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_ssr_state(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     result = _base_result(config, spec)
     if not config.test_url:
         return _not_tested(config, spec, spec.how_to_test)
@@ -931,7 +948,9 @@ def _probe_ssr_state(config: AuditConfig, spec: PathSpec, *, browser_mode: str =
 # ── 探测器：JS 包 ───────────────────────────────────
 
 
-def _probe_js_bundle(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_js_bundle(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     result = _base_result(config, spec)
     if not config.test_url:
         return _not_tested(config, spec, spec.how_to_test)
@@ -993,7 +1012,9 @@ def _browser_guard(
     return None
 
 
-def _probe_dom(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_dom(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     blocked = _browser_guard(config, spec, browser_mode)
     if blocked is not None:
         return blocked
@@ -1055,7 +1076,9 @@ def _probe_dom(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto
     return result
 
 
-def _probe_browser_xhr(config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto") -> PathResult:
+def _probe_browser_xhr(
+    config: AuditConfig, spec: PathSpec, *, browser_mode: str = "auto"
+) -> PathResult:
     blocked = _browser_guard(config, spec, browser_mode)
     if blocked is not None:
         return blocked
@@ -1558,7 +1581,10 @@ def render_markdown(run: AuditRun) -> str:
         if result.rejected and result.stop_reason != "not_tested":
             detail = f"{detail}；淘汰：{result.rejected}"
         lines.append(
-            "| {index} | {label} | {layer} | {status} | {latency} | {login} | {sign} | {fields} | {detail} |".format(
+            (
+                "| {index} | {label} | {layer} | {status} | {latency} | "
+                "{login} | {sign} | {fields} | {detail} |"
+            ).format(
                 index=PATHS[result.path].index,
                 label=result.label,
                 layer=result.layer,

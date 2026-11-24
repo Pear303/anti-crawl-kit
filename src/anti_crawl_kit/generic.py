@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import logging
 import random
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -104,7 +103,7 @@ class PlatformSpec:
     adaptive_threshold: float = 40.0
 
     @classmethod
-    def from_dict(cls, data: dict) -> "PlatformSpec":
+    def from_dict(cls, data: dict) -> PlatformSpec:
         """从 YAML/JSON 字典构造配置。
 
         字段格式::
@@ -143,16 +142,7 @@ class PlatformSpec:
 
 def _build_extract_js(spec: PlatformSpec) -> str:
     """把字段规则编译成一段页面内执行的 JS（比逐条 locator 快一个量级）。"""
-    import json
 
-    fields_payload = {
-        name: {
-            "selector": f.selector,
-            "attr": f.attr,
-            "all": f.all,
-        }
-        for name, f in spec.fields.items()
-    }
     return """(payload) => {
         var cards = Array.from(document.querySelectorAll(payload.card));
         return cards.map(function(card) {
@@ -167,7 +157,9 @@ def _build_extract_js(spec: PlatformSpec) -> str:
                     return el.getAttribute(f.attr) || '';
                 }
                 if (f.all) {
-                    row[name] = nodes.map(read).filter(function(v) { return v !== null && v !== ''; });
+                    row[name] = nodes.map(read).filter(function(v) {
+                        return v !== null && v !== '';
+                    });
                 } else {
                     row[name] = read(nodes[0]);
                 }
@@ -257,9 +249,9 @@ class GenericCollector:
             if not isinstance(item, dict):
                 continue
             row: dict[str, Any] = {}
-            for name, field in spec.fields.items():
-                value = pick_path(item, field.state_path or name)
-                if value is None and field.all:
+            for name, field_spec in spec.fields.items():
+                value = pick_path(item, field_spec.state_path or name)
+                if value is None and field_spec.all:
                     value = []
                 row[name] = value
             # 整行全空视为无效，避免把空对象写进结果
@@ -435,7 +427,7 @@ class GenericCollector:
         selector = card_selector or spec.card_selector
         seen = 0
         idle_rounds = 0
-        for i in range(spec.scroll.times):
+        for _ in range(spec.scroll.times):
             count = page.evaluate(
                 "(sel) => document.querySelectorAll(sel).length", selector
             )

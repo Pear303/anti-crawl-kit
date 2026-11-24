@@ -8,8 +8,8 @@ from pathlib import Path
 from anti_crawl_kit.profile_cache import (
     CACHE_DIRS,
     PROTECTED_PATHS,
-    prune_profile_cache,
     profile_cache_size_mb,
+    prune_profile_cache,
 )
 
 

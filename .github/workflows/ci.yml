@@ -114,6 +114,36 @@ jobs:
       - name: Pytest (offline)
         run: pytest -q -m "not browser"
 
+  # 覆盖率门槛：只在装了全部依赖的环境统计（offline 会少跑一半用例）。
+  # 基线 71.6%（2026-11-24），门槛设 70% 留一点波动余量。
+  coverage:
+    name: coverage (py3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements.txt
+      - name: Install (all extras)
+        run: pip install -e ".[all,dev]"
+      - name: Pytest with coverage gate
+        run: |
+          pytest -q -m "not browser" \
+            --cov --cov-report=term \
+            --cov-report=xml \
+            --cov-fail-under=70
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: warn
+
   # 浏览器集成：手动触发（需要 Chrome，CI 里成本高）
   browser:
     name: browser integration (manual)

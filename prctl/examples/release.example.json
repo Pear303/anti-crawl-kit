@@ -1,0 +1,35 @@
+{
+  "pr": "123",
+  "release_type": "service",
+  "flag": "billing.team-plan-seats",
+  "rollout": [
+    {
+      "stage": "internal",
+      "percentage": 100,
+      "soak_hours": 24
+    },
+    {
+      "stage": "latest",
+      "percentage": 5,
+      "soak_hours": 168
+    },
+    {
+      "stage": "stable",
+      "percentage": 100,
+      "soak_hours": 168
+    }
+  ],
+  "rollback": {
+    "steps": [
+      "Turn off billing.team-plan-seats",
+      "Confirm legacy invoices",
+      "Notify #billing-oncall"
+    ],
+    "verification": "billing.error_rate < 0.1% for 10 minutes"
+  },
+  "monitoring": [
+    "billing.error_rate",
+    "invoice_generation_latency",
+    "checkout_conversion"
+  ]
+}

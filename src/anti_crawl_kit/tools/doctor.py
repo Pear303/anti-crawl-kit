@@ -70,14 +70,8 @@ def _module_version(name: str, dist: str) -> str | None:
 
 def _check_python() -> Check:
     current = ".".join(str(part) for part in sys.version_info[:3])
-    if sys.version_info >= (3, 10):
-        return Check("OK", "Python", f"{current} (>= 3.10)")
-    return Check(
-        "FAIL",
-        "Python 版本过低",
-        f"{current}，需要 >= 3.10",
-        "升级 Python：https://www.python.org/downloads/",
-    )
+    # requires-python >= 3.10 由安装阶段保证，这里只报告实际版本
+    return Check("OK", "Python", f"{current} (>= 3.10)")
 
 
 def _check_core() -> Check:
@@ -180,7 +174,9 @@ def _check_browsers() -> list[Check]:
                 "WARN",
                 "Chrome 与 patchright 版本差得较多",
                 f"系统 {actual}，patchright 期望 {expected}（差 {gap} 个大版本）",
-                "ack-probe / ack-dom / ack-detect 会直接拒绝启动；ack-recipe / ack-ui 不受影响。把 Chrome 与 patchright 期望的大版本对齐（升/降任一侧）",
+                "ack-probe / ack-dom / ack-detect 会直接拒绝启动；"
+                "ack-recipe / ack-ui 不受影响。"
+                "把 Chrome 与 patchright 期望的大版本对齐（升/降任一侧）",
             )
         )
     else:

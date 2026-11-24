@@ -1,0 +1,24 @@
+{
+  "pr": "local-1",
+  "round": 2,
+  "context": "delta",
+  "conclusion": "pass",
+  "findings": [
+    {
+      "id": "R2-001",
+      "severity": "P2",
+      "category": "goal",
+      "file": "src/anti_crawl_kit/text.py",
+      "line": 74,
+      "problem": "新增 docstring（text.py:31-33、70-72）声明段间仅允许“零”与空白，但 parse_count:74 与 normalize_count:100 在调用 _parse_unit_count 前删除全部 ASCII 逗号，使逗号实际成为合法段间分隔：parse_count('2亿,3万') 与 parse_count('2亿, 3万') 仍把两个无关计数累加为 200,030,000（全角逗号 '2亿，3万' 则正确停在 200,000,000）。R-002 的“任意分隔符触发多段累加”在 ASCII 逗号路径上残留，契约与实现不一致；tests/test_text.py 的 SEGMENT_CASES 仅有全角逗号与文本/标点用例，未覆盖该边界。",
+      "evidence": "独立验证（PYTHONPATH=src）：parse_count('2亿,3万')=200030000、normalize_count('2亿,3万')=200030000；parse_count('2亿, 3万')=200030000；对照 parse_count('2亿，3万')=200000000；千分位 parse_count('1,234万')=12340000、parse_count('1,234')=1234 说明逗号清理是既有兼容行为，不能简单删除。",
+      "disposition": "deferred",
+      "disposition_note": "建议仅移除数字之间的千分位逗号（如 re.sub(r'(?<=\\d),(?=\\d)', '', text)），或明确把 ASCII 逗号写入契约并补回归测试；非阻塞，剩余场景仅限两个计数直接以 ASCII 逗号相邻。"
+    }
+  ],
+  "filtered": {
+    "style": 0,
+    "redundancy": 0,
+    "other": 2
+  }
+}
