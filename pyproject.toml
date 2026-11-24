@@ -90,8 +90,8 @@ exclude = [".venv", "build", "dist", "prctl"]
 
 [tool.ruff.lint]
 # 常规集合：错误 + pyflakes + 警告 + import 排序 + 语法升级 + bugbear。
-# 历史代码已在 0.15.0 清零，新增违规直接失败。
-select = ["E", "F", "W", "I", "UP", "B"]
+# RUF100 单独开：无用的 noqa 会掩盖真实问题，必须能被发现。
+select = ["E", "F", "W", "I", "UP", "B", "RUF100"]
 
 [tool.ruff.lint.per-file-ignores]
 # ui_assets.py 只放内嵌 HTML/CSS/JS 字符串，行宽由前端语法决定，

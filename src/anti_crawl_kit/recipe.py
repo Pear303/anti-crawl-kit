@@ -427,7 +427,8 @@ def eval_when(expression: str, context: Mapping[str, Any]) -> bool:
             raise ValueError(f"when 表达式不允许访问私有名称: {node.id}")
     namespace = {"__builtins__": {}, **_box(context)}
     return bool(
-        eval(  # noqa: S307 - AST 已白名单，且无 builtins
+        # 安全性由上面的 AST 白名单 + 清空 __builtins__ 保证
+        eval(
             compile(tree, "<when>", "eval"),
             namespace,
         )

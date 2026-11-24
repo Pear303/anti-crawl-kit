@@ -1,13 +1,7 @@
 """无浏览器测试：agent_probe 的页面状态判定。"""
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
-
-from anti_crawl_kit.tools.agent_probe import (  # noqa: E402
+from anti_crawl_kit.tools.agent_probe import (
     _analyze_html,
     _build_script_hint,
     _diff_payload,
