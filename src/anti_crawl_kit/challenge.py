@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -110,8 +111,10 @@ _BODY_BLOCKED_KEYWORDS = (
     "Too Many Requests",
 )
 
-_DOM_PROBE_JS_TEMPLATE = """
-(opts) => {
+# 未替换的占位符形如 __SELECTORS__；必须以大写字母开头，避免误伤注释分隔线
+_PLACEHOLDER_RE = re.compile(r"__[A-Z][A-Z_]*__")
+
+_DOM_PROBE_JS_TEMPLATE = """(opts) => {
   function visible(el) {
     if (!el) return false;
     var r = el.getBoundingClientRect();
@@ -181,6 +184,10 @@ def _build_dom_probe_js() -> str:
     js = _DOM_PROBE_JS_TEMPLATE
     for placeholder, keywords in values.items():
         js = js.replace(placeholder, json.dumps(list(keywords), ensure_ascii=False))
+    leftover = _PLACEHOLDER_RE.findall(js)
+    if leftover:
+        # 静默失败在这里最危险：脚本照跑，只是再也认不出验证墙
+        raise RuntimeError(f"DOM 探测脚本仍有未替换的占位符: {leftover}")
     return js
 
 

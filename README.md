@@ -275,9 +275,9 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 改动合并前要过三道机器检查：
 
 ```bash
-python -m ruff check src tests                      # E / F / W / I / UP / B
-python -m pytest -q                                 # 653 passed / 2 skipped
-python -m pytest -q --cov --cov-fail-under=70       # 当前 71.6%
+python -m ruff check .                              # 含 examples / scripts
+python -m pytest -q                                 # 663 passed / 2 skipped
+python -m pytest -q --cov --cov-fail-under=68       # 本地 72%，CI 门槛 68%
 ```
 
 PR 还要过 `prctl gate`（证据包 / 审核报告 / 安全报告 / 风险审批 / 发布计划）。

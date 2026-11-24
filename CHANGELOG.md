@@ -25,8 +25,9 @@
 
 ### 变更
 
-- ruff 规则从「只查运行错误」扩到常规集合 `E / F / W / I / UP / B`：
+- ruff 规则从「只查运行错误」扩到常规集合 `E / F / W / I / UP / B / RUF100`：
   自动修复 112 处，另外手工处理 74 处（66 处长行折行、8 处语义问题）。
+  `RUF100` 让无用的 `noqa` 也能被直接发现；本轮清掉了 8 处指向未启用规则的残留。
   `ui_assets.py` 是唯一豁免 `E501` 的文件——它只放内嵌 HTML/CSS/JS。
 - `report.py` 的样式表移入 `ui_assets.py`（`REPORT_CSS`），报告与 UI 的内嵌
   资源集中到一个模块，职责更清楚。
@@ -41,6 +42,10 @@
   `field_spec`，不再遮蔽 `dataclasses.field`。
 - `tools/doctor.py` 删除 `sys.version_info >= (3, 10)` 的恒真分支
   （`requires-python` 已在安装阶段保证）。
+- 门禁规则不能在同一 PR 里被改弱：`.prctl/**` 列为 high，CI 检测到改动
+  门禁自身时，会用 base 分支的 policy 重新分级并 gate。
+- 风险分级改用 `core.quotepath=false` 输出路径：中文文件名不再被八进制
+  转义，否则 `.github/workflows/**` 这类规则会匹配失败、高风险被降级。
 
 ### 文档
 

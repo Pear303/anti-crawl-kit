@@ -70,7 +70,14 @@ def _module_version(name: str, dist: str) -> str | None:
 
 def _check_python() -> Check:
     current = ".".join(str(part) for part in sys.version_info[:3])
-    # requires-python >= 3.10 由安装阶段保证，这里只报告实际版本
+    # requires-python 只约束安装；源码直跑时仍要给出明确失败信号
+    if sys.version_info < (3, 10):  # noqa: UP036 - 运行期兜底，target-version 管不到
+        return Check(
+            "FAIL",
+            "Python 版本过低",
+            f"{current}，本包要求 3.10+",
+            "升级 Python：https://www.python.org/downloads/",
+        )
     return Check("OK", "Python", f"{current} (>= 3.10)")
 
 

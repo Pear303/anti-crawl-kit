@@ -36,7 +36,8 @@ def parse_quotes(client: AntiRiskHttpClient, *, tamper: bool = False) -> list[di
     )
     items = [
         {"title": text.strip(), "author": author.strip()}
-        for text, author in zip(texts, authors)
+        # 示例页偶尔缺 author，保持「按较短截断」的原有行为
+        for text, author in zip(texts, authors, strict=False)
     ]
     if tamper and items:
         items[0]["title"] = "被篡改的标题"

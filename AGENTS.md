@@ -261,7 +261,7 @@ agent 手写能解决就手写，但不要裸 `requests`。
 
 ```bash
 python -m ruff check src tests                      # E / F / W / I / UP / B
-python -m pytest -q                                 # 653 passed / 2 skipped
+python -m pytest -q                                 # 663 passed / 2 skipped
 python -m pytest -q --cov --cov-fail-under=70       # 当前 71.6%
 prctl gate --pr <编号>                               # 证据 / 审核 / 安全 / 风险 / 发布
 ```
