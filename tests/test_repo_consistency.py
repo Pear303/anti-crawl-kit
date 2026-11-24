@@ -79,9 +79,12 @@ def test_prctl_policy_treats_gate_files_as_high() -> None:
     """门禁规则自身必须是高风险，否则同一个 PR 可以把规则改弱再自我放行。"""
     text = (ROOT / ".prctl" / "policy.yml").read_text(encoding="utf-8")
     high_block = text.split("rules:")[1].split("medium:")[0]
-    assert '".prctl/**"' in high_block
+    assert '".prctl/policy.yml"' in high_block
+    assert '".prctl/schemas/**"' in high_block
     assert '"prctl/**"' in high_block
     assert '".github/workflows/**"' in high_block
+    # 证据产物不参与审批，否则每个 PR 都会被判 high
+    assert '".prctl/**"' not in high_block
 
 
 def test_prctl_workflows_unquote_paths() -> None:
@@ -93,11 +96,24 @@ def test_prctl_workflows_unquote_paths() -> None:
 
 
 def test_prctl_gate_guards_policy_changes() -> None:
-    """改门禁自身时，要用 base 分支的 policy 复核。"""
+    """改门禁规则时，要用 base 分支的 policy 复核，且锚点不能落在工作区。"""
     text = (ROOT / ".github" / "workflows" / "prctl-gate.yml").read_text(encoding="utf-8")
-    assert "base-policy.yml" in text
+    assert "RUNNER_TEMP" in text
     assert 'git show "origin/$BASE_REF:.prctl/policy.yml"' in text
-    assert "--policy base-policy.yml" in text
+    assert '--policy "$POLICY_PATH"' in text
+    # 不能用「工作区里存在 base-policy.yml」来决定是否使用受信规则
+    assert "-f base-policy.yml" not in text
+    assert "policy_path=$POLICY_PATH" in text
+
+
+def test_prctl_artifacts_are_low_risk() -> None:
+    """证据产物每个 PR 都会提交；算成 high 会让 high 失去区分度。"""
+    text = (ROOT / ".prctl" / "policy.yml").read_text(encoding="utf-8")
+    rules = text.split("rules:")[1]
+    high_block = rules.split("medium:")[0]
+    low_block = rules.split("low:")[1]
+    assert '".prctl/artifacts/**"' not in high_block
+    assert '".prctl/artifacts/**"' in low_block
 
 
 def test_no_sensitive_profiles_in_repo() -> None:

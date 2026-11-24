@@ -35,9 +35,10 @@ risk:
     high: 2
   rules:
     high:
-      # 发版流水线、门禁自身、打包脚本：改错会直接影响发布
+      # 发版流水线、门禁规则、打包脚本：改错会直接影响发布
       - ".github/workflows/**"
-      - ".prctl/**"
+      - ".prctl/policy.yml"
+      - ".prctl/schemas/**"
       - "prctl/**"
       - "scripts/**"
       - "**/Dockerfile"
@@ -49,6 +50,8 @@ risk:
       - "requirements.txt"
       - "benchmarks/**"
     low:
+      # 证据产物不需要审批；否则每个 PR 都会因为提交 evidence.json 变成 high
+      - ".prctl/artifacts/**"
       - "docs/**"
       - "*.md"
       - "**/*.md"
