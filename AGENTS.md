@@ -260,9 +260,10 @@ agent 手写能解决就手写，但不要裸 `requests`。
 改这个仓库本身时，走这套流程（规范见 `CONTRIBUTING.md`）：
 
 ```bash
-python -m ruff check src tests                      # E / F / W / I / UP / B
-python -m pytest -q                                 # 664 passed / 2 skipped
-python -m pytest -q --cov --cov-fail-under=70       # 当前 71.6%
+python -m ruff check .                              # 含 examples / scripts
+cd prctl && python -m ruff check . && cd ..
+python -m pytest -q                                 # 667 passed / 2 skipped
+python -m pytest -q --cov --cov-fail-under=68       # 本地 72%，CI 门槛 68%
 prctl gate --pr <编号>                               # 证据 / 审核 / 安全 / 风险 / 发布
 ```
 

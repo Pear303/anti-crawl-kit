@@ -72,7 +72,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
-    policy = Policy.load(args.policy)
+    policy = _policy_from_args(args)
     evidence = _load_json(args.evidence)
     validate_evidence(evidence, policy)
     target = args.artifacts_dir / "evidence.json"
@@ -82,7 +82,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 
 def cmd_review(args: argparse.Namespace) -> int:
-    policy = Policy.load(args.policy)
+    policy = _policy_from_args(args)
     report = _load_json(args.report)
     target = args.artifacts_dir / f"review-{report['round']}.json"
     existing = sorted(
@@ -102,7 +102,7 @@ def cmd_review(args: argparse.Namespace) -> int:
 
 
 def cmd_security(args: argparse.Namespace) -> int:
-    policy = Policy.load(args.policy)
+    policy = _policy_from_args(args)
     report = _load_json(args.report)
     validate_security(report, policy)
     target = args.artifacts_dir / "security.json"
@@ -112,7 +112,7 @@ def cmd_security(args: argparse.Namespace) -> int:
 
 
 def cmd_risk(args: argparse.Namespace) -> int:
-    policy = Policy.load(args.policy)
+    policy = _policy_from_args(args)
     files = list(args.files)
     if args.files_from:
         files += [
@@ -149,7 +149,7 @@ def cmd_approve(args: argparse.Namespace) -> int:
 
 
 def cmd_gate(args: argparse.Namespace) -> int:
-    policy = Policy.load(args.policy)
+    policy = _policy_from_args(args)
     result = evaluate_gate(args.artifacts_dir, policy, args.approvals)
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -163,7 +163,7 @@ def cmd_gate(args: argparse.Namespace) -> int:
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    policy = Policy.load(args.policy)
+    policy = _policy_from_args(args)
     result = evaluate_gate(args.artifacts_dir, policy, args.approvals)
     print(f"PR {args.pr}: {result['state']} ({result['overall']})")
     for check in result["checks"]:
@@ -173,13 +173,19 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_release(args: argparse.Namespace) -> int:
-    policy = Policy.load(args.policy)
+    policy = _policy_from_args(args)
     plan = _load_json(args.plan)
     validate_release(plan, policy)
     target = args.artifacts_dir / "release.json"
     _write_json(target, plan)
     print(f"release plan PASS -> {target}")
     return 0
+
+
+def _policy_from_args(args: argparse.Namespace) -> Policy:
+    """显式指定的 --policy 必须存在；只有默认路径才允许回退内置规则。"""
+    explicit = Path(args.policy) != DEFAULT_POLICY_PATH
+    return Policy.load(args.policy, strict=explicit)
 
 
 def _add_common(parser: argparse.ArgumentParser, pr_required: bool = True) -> None:

@@ -76,14 +76,23 @@ class Policy:
     path: Path | None = None
 
     @classmethod
-    def load(cls, path: Path | None = None) -> "Policy":
+    def load(cls, path: Path | None = None, *, strict: bool = False) -> Policy:
+        """读取 policy。
+
+        strict=True 时，路径不存在或解析结果为空都直接报错：
+        显式传入的规则文件不能静默降级成内置默认值。
+        """
         policy_path = path or DEFAULT_POLICY_PATH
         if policy_path.exists():
             with policy_path.open(encoding="utf-8") as handle:
                 loaded = yaml.safe_load(handle) or {}
             if not isinstance(loaded, dict):
                 raise ValueError(f"policy must be a mapping: {policy_path}")
+            if strict and not loaded:
+                raise ValueError(f"policy file is empty: {policy_path}")
             return cls(deep_merge(DEFAULTS, loaded), policy_path)
+        if strict:
+            raise FileNotFoundError(f"policy file not found: {policy_path}")
         return cls(copy.deepcopy(DEFAULTS), None)
 
     def _section(self, name: str) -> dict[str, Any]:

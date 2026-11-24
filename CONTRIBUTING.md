@@ -6,12 +6,13 @@
 ## 本地检查（提 PR 前必跑）
 
 ```bash
-python -m ruff check src tests
+python -m ruff check .
+cd prctl && python -m ruff check . && cd ..
 python -m pytest -q
 python -m pytest -q --cov --cov-fail-under=68     # 覆盖率门槛
 ```
 
-当前基线：`664 passed / 2 skipped`，本地总覆盖率 72%（CI 门槛 68%，为 Linux
+当前基线：`667 passed / 2 skipped`，本地总覆盖率 72%（CI 门槛 68%，为 Linux
 缺少 Windows 专有分支留余量）。
 
 `mypy` 目前只报告不阻塞（143 个历史错误），新增代码不要继续增加。

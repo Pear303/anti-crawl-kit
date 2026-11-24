@@ -43,3 +43,17 @@ def test_build_dom_probe_js_rejects_leftover_placeholder(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="占位符"):
         challenge._build_dom_probe_js()
+
+
+def test_keywords_with_dunder_tokens_are_not_placeholders(monkeypatch) -> None:
+    """注入内容里的 __NEXT_DATA__ 这类站点 token 不能被误判成未替换的占位符。"""
+    monkeypatch.setattr(
+        challenge,
+        "_BODY_CAPTCHA_KEYWORDS",
+        challenge._BODY_CAPTCHA_KEYWORDS + ("__NEXT_DATA__",),
+    )
+
+    js = challenge._build_dom_probe_js()
+
+    assert "__NEXT_DATA__" in js
+    assert "__SELECTORS__" not in js

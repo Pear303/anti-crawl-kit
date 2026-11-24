@@ -24,7 +24,7 @@ pip install -e ".[all,dev]"
 
 ```bash
 python -m pytest tests -q
-python -m ruff check src tests
+python -m ruff check .
 ```
 
 最小安装 `.[dev]` 时，依赖浏览器 / HTTP / YAML / MCP 的用例会自动跳过，
@@ -276,7 +276,7 @@ JS 包找接口 > HTTP 直连 > SSR 全局状态 > XHR 拦截 > DOM。
 
 ```bash
 python -m ruff check .                              # 含 examples / scripts
-python -m pytest -q                                 # 664 passed / 2 skipped
+python -m pytest -q                                 # 667 passed / 2 skipped
 python -m pytest -q --cov --cov-fail-under=68       # 本地 72%，CI 门槛 68%
 ```
 

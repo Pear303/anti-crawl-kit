@@ -4,29 +4,34 @@
   "no_ui_reason": "改动是库与 CLI：lint 规则、测试、覆盖率配置、门禁配置。唯一涉及前端的是 report.py 的 CSS 常量迁到 ui_assets.py，通过 render_html 输出断言验证，不新增页面。",
   "acceptance_criteria": [
     {
-      "criterion": "ruff check src tests 退出码 0，规则集为 E/F/W/I/UP/B/RUF100",
+      "criterion": "ruff check . 退出码 0，规则集为 E/F/W/I/UP/B/RUF100",
       "result": "PASS",
-      "evidence": "python -m ruff check src tests -> All checks passed!；select 见 pyproject.toml:84；RUF100 实测能抓出 # noqa: S307 这类无用指令"
+      "evidence": "python -m ruff check . -> All checks passed!（含 examples / scripts）；select 见 pyproject.toml:94；RUF100 实测能抓出 # noqa: S307 这类无用指令"
+    },
+    {
+      "criterion": "vendored 的 prctl 也受 lint 约束",
+      "result": "PASS",
+      "evidence": "cd prctl && python -m ruff check . -> All checks passed!；prctl/pyproject.toml 有独立 [tool.ruff]，CI lint job 增加 Ruff (prctl) 一步"
     },
     {
       "criterion": "没有 noqa 被用来掩盖普通代码行",
       "result": "PASS",
-      "evidence": "全仓 noqa 仅剩 bench.py:35-37 三处 E402（独立脚本必须在 sys.path 自举后导入），tests/test_agent_probe.py 的 sys.path hack 已删除（conftest.py 已负责）"
+      "evidence": "全仓 noqa 仅剩 bench.py:35-37 三处 E402（独立脚本必须在 sys.path 自举后导入）与 doctor.py 的一处 UP036（3.9 运行期兜底）；两处都经 Reviewer 验证为必要"
     },
     {
       "criterion": "pytest 全绿且数量不低于改动前",
       "result": "PASS",
-      "evidence": "python -m pytest -q -> 664 passed, 2 skipped（改动前 520 passed / 2 skipped）；2 个 skip 是 ACK_BROWSER=1 才跑的浏览器用例"
+      "evidence": "python -m pytest -q -> 667 passed, 2 skipped（改动前 520 passed / 2 skipped）；2 个 skip 是 ACK_BROWSER=1 才跑的浏览器用例"
     },
     {
-      "criterion": "总覆盖率不低于 70%，且 CI 会阻塞",
+      "criterion": "总覆盖率不低于 68%，且 CI 会阻塞",
       "result": "PASS",
-      "evidence": "python -m pytest -q --cov --cov-report=term -> TOTAL 9896 2806 72%；ci.yml 新增 coverage job，--cov-fail-under=70"
+      "evidence": "python -m pytest -q --cov --cov-report=term -> TOTAL 9906 2808 72%；ci.yml:141 使用 --cov-fail-under=68（Linux 缺 Windows 专有分支，留 4pp 余量）"
     },
     {
       "criterion": "CSS 迁移后 HTML 报告不退化",
       "result": "PASS",
-      "evidence": "render_html(...) 输出含 <style> / .meta { / .section { / prefers-color-scheme / <script>，不含 {_CSS} 占位符，LEN 10107，doctype 与 </html> 完整"
+      "evidence": "render_html(...) 输出含 <style> / .meta { / .section { / prefers-color-scheme / <script>，不含 {_CSS}；新增 test_report_assets 同时锁 12 个锚点、字节数与规则条数"
     },
     {
       "criterion": "ack init health --out 可用且不覆盖已有文件",
@@ -41,17 +46,17 @@
     {
       "criterion": "prctl 门禁可运行且风险分级符合项目结构",
       "result": "PASS",
-      "evidence": "prctl risk --files .prctl/policy.yml -> level=high, approvals=2；--files src/.../report.py .github/workflows/ci.yml -> level=high"
+      "evidence": ".prctl/policy.yml 与 .prctl/schemas/** -> high/2；.github/workflows/ci.yml -> high/2；src/** -> medium/1；.prctl/artifacts/** -> low/0"
+    },
+    {
+      "criterion": "门禁规则不能被同一个 PR 改弱",
+      "result": "PASS",
+      "evidence": "gate workflow 检测到规则改动时用 base 分支 policy 复核，锚点放 $RUNNER_TEMP 并用 policy_path 输出判断；显式 --policy 不存在时 prctl 直接报错（strict 模式）"
     },
     {
       "criterion": "MCP server 工具数与版本正确",
       "result": "PASS",
       "evidence": "ClientSession 连接 python -m anti_crawl_kit.mcp_server -> serverInfo.version=0.15.0，tool_count=17"
-    },
-    {
-      "criterion": "门禁规则不能被同一个 PR 改弱",
-      "result": "PASS",
-      "evidence": ".prctl/policy.yml 与 .prctl/schemas/** 判 high（2 审批）；gate workflow 检测到规则改动时用 base 分支 policy 复核，锚点放 $RUNNER_TEMP；.prctl/artifacts/** 判 low（0 审批）"
     },
     {
       "criterion": "可以构建 sdist",
@@ -61,16 +66,24 @@
   ],
   "commands": [
     {
-      "command": "python -m ruff check src tests",
+      "command": "python -m ruff check .",
+      "output": "All checks passed!"
+    },
+    {
+      "command": "cd prctl && python -m ruff check .",
       "output": "All checks passed!"
     },
     {
       "command": "python -m pytest -q",
-      "output": "664 passed, 2 skipped in 6.67s"
+      "output": "667 passed, 2 skipped in 6.43s"
+    },
+    {
+      "command": "cd prctl && python -m pytest -q",
+      "output": "33 passed in 0.31s"
     },
     {
       "command": "python -m pytest -q --cov --cov-report=term",
-      "output": "TOTAL 9896 2806 72%"
+      "output": "TOTAL 9906 2808 72%"
     },
     {
       "command": "prctl risk --pr local-2 --files src/anti_crawl_kit/report.py tests/test_risk.py pyproject.toml .github/workflows/ci.yml",
@@ -88,24 +101,25 @@
       "ack doctor --json -> ok=true，13 项检查 0 FAIL",
       "ack --version -> 0.15.0",
       "38 项自测全部通过（16 个子命令 --help、三种 init、配方执行、离线 fixture、HTML 报告、sdist 构建）",
-      "MCP: serverInfo anti-crawl-kit 0.15.0, 17 tools"
+      "MCP: serverInfo anti-crawl-kit 0.15.0, 17 tools",
+      "独立审核：Verifier 9 项、Reviewer 2 轮、Security 3 轮，问题均已修复或明确接受"
     ]
   },
   "impact": {
     "affected_modules": [
-      "ruff 配置与 CI（pyproject.toml、.github/workflows/ci.yml）",
+      "ruff 配置与 CI（pyproject.toml、prctl/pyproject.toml、.github/workflows/ci.yml）",
       "report.py / ui_assets.py（CSS 迁移）",
-      "captcha.py / challenge.py / notify.py（内嵌脚本折行）",
+      "captcha.py / challenge.py / notify.py（内嵌脚本折行与占位符校验）",
       "generic.py / tools/doctor.py / tools/bench.py（语义清理）",
       "tools/init_cli.py / tools/health_cli.py（--out）",
-      ".prctl/ 与 prctl/（新增门禁）"
+      ".prctl/ 与 prctl/（新增门禁，prctl 的 Policy.load 增加 strict）"
     ],
-    "compatibility": "仍要求 Python 3.10+。语法升级（Optional/List/Union -> PEP 604/585）在 3.10 全部合法；公共 API 未变，仅新增 ack init health --out 与 RUF100 规则。",
-    "risk_notes": "ruff 自动修复触及 40+ 文件，主要风险是行为漂移；已用 656 个测试覆盖。CSS 迁移属于纯移动，用 HTML 输出断言兜底。门禁新增不改变运行时行为，只影响合并流程。"
+    "compatibility": "仍要求 Python 3.10+。语法升级（Optional/List/Union -> PEP 604/585）在 3.10 全部合法；公共 API 未变，仅新增 ack init health --out。prctl 的 Policy.load 新增可选参数 strict，默认行为不变。",
+    "risk_notes": "ruff 自动修复触及 40+ 文件，主要风险是行为漂移；已用 667 个测试覆盖。CSS 迁移属于纯移动，用锚点 + 体量断言兜底。门禁新增不改变运行时行为，只影响合并流程。"
   },
   "security": {
     "secrets": "无新增凭据；.gitignore 增加覆盖率产物，profiles/ 与 benchmarks 原始数据仍被排除。",
-    "input_validation": "CLI 的 --out / --out-dir 由使用者显式给出，已有 exists 守卫避免覆盖；模板内容是固定常量。",
+    "input_validation": "CLI 的 --out / --out-dir 由使用者显式给出，已有 exists 守卫避免覆盖；模板内容是固定常量。prctl 显式 --policy 不存在时直接报错。",
     "authz": "不涉及鉴权；CI 门禁只读仓库，prctl-risk 需要 pull-requests: write 用于打标签。",
     "dependencies": "新增 pytest-cov（仅 dev）；vendored prctl 依赖 jsonschema + PyYAML，已审无 subprocess / 网络 / eval / pickle，YAML 用 safe_load。"
   },
@@ -113,7 +127,7 @@
     "flag": "无运行时开关（库项目）：通过版本回退",
     "steps": [
       "pip install anti-crawl-kit==0.14.0",
-      "git revert 本次提交（79f5fb6 / 7617497 / fd2b508 / 948eba9 / de35d5b / 96ee027）",
+      "git revert 本次提交（从 96ee027 到终审修复的提交）",
       "删除远端 tag：git push --delete origin v0.15.0"
     ],
     "verification": "在 revert 后的提交上跑 python -m pytest -q，确认回到 520 passed / 2 skipped",

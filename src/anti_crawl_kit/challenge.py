@@ -181,10 +181,18 @@ def _build_dom_probe_js() -> str:
         "__BODY_CAPTCHA__": _BODY_CAPTCHA_KEYWORDS,
         "__BODY_BLOCKED__": _BODY_BLOCKED_KEYWORDS,
     }
+
+    # 只校验模板里的占位符：注入内容可能含站点自己的 __NEXT_DATA__ 这类 token，
+    # 如果扫成品会把合法关键词误判成「未替换」。
+    undeclared = set(_PLACEHOLDER_RE.findall(_DOM_PROBE_JS_TEMPLATE)) - set(values)
+    if undeclared:
+        raise RuntimeError(f"DOM 探测脚本模板里有未定义的占位符: {sorted(undeclared)}")
+
     js = _DOM_PROBE_JS_TEMPLATE
     for placeholder, keywords in values.items():
         js = js.replace(placeholder, json.dumps(list(keywords), ensure_ascii=False))
-    leftover = _PLACEHOLDER_RE.findall(js)
+
+    leftover = [placeholder for placeholder in values if placeholder in js]
     if leftover:
         # 静默失败在这里最危险：脚本照跑，只是再也认不出验证墙
         raise RuntimeError(f"DOM 探测脚本仍有未替换的占位符: {leftover}")

@@ -24,6 +24,9 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Ruff
         run: ruff check .
+      - name: Ruff (prctl)
+        working-directory: prctl
+        run: ruff check .
 
   # 类型检查：先只报告不阻塞（当前基线 140+），新代码不应继续增加
   typecheck:
