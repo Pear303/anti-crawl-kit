@@ -8,14 +8,14 @@
 ```bash
 python -m ruff check .
 cd prctl && python -m ruff check . && cd ..
+python -m mypy src/anti_crawl_kit
 python -m pytest -q
 python -m pytest -q --cov --cov-fail-under=68     # 覆盖率门槛
 ```
 
 当前基线：`667 passed / 2 skipped`，本地总覆盖率 72%（CI 门槛 68%，为 Linux
-缺少 Windows 专有分支留余量）。
-
-`mypy` 目前只报告不阻塞（143 个历史错误），新增代码不要继续增加。
+缺少 Windows 专有分支留余量）。`mypy` 与 `ruff` 都是阻塞项，0 错误。mypy 用
+3.11 口径（`enum.StrEnum` 的 typeshed 定义），运行时兼容 3.10 由 CI 矩阵保证。
 
 ## 证据包
 

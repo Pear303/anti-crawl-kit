@@ -29,6 +29,7 @@ import signal
 import sys
 import threading
 import time
+from typing import Any
 
 from .page import PageAdapter
 
@@ -261,10 +262,12 @@ class BrowserSession:
         self.anti_crawl = anti_crawl
         self.skip_version_check = skip_version_check
 
-        self._playwright = None
-        self._browser = None
-        self._context = None
-        self._pw_page = None
+        # patchright 是可选依赖，运行时才导入；这里用 Any 承接 playwright 对象，
+        # 具体类型由 patchright 自己的存根决定（未安装时不存在）。
+        self._playwright: Any = None
+        self._browser: Any = None
+        self._context: Any = None
+        self._pw_page: Any = None
         self._page_adapter: PageAdapter | None = None
         self._atexit_registered = False
         self._browser_gone = False

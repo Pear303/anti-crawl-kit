@@ -28,11 +28,10 @@ jobs:
         working-directory: prctl
         run: ruff check .
 
-  # 类型检查：先只报告不阻塞（当前基线 140+），新代码不应继续增加
+  # 类型检查：2026-11 起为阻塞项。mypy 用 3.11 口径（见 pyproject.toml）
   typecheck:
-    name: typecheck (non-blocking)
+    name: typecheck
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -42,9 +41,9 @@ jobs:
           cache-dependency-path: |
             pyproject.toml
             requirements.txt
-      - name: Install (core + dev only)
-        run: pip install -e ".[dev]"
-      - name: Mypy (report only)
+      - name: Install (all extras)
+        run: pip install -e ".[all,dev]"
+      - name: Mypy
         run: mypy src/anti_crawl_kit
 
   # Windows：路径分隔符、GBK 控制台、文件 mtime 精度都和 Linux 不同

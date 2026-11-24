@@ -334,7 +334,7 @@ class UiService:
             # 纯逻辑配方不应该因为没装 [http] 就失败；只有 http_* 步骤才建客户端
             need_http = any(step.uses.startswith("http_") for step in recipe.steps)
             http_client = self._client() if need_http else None
-            context = nullcontext(None)
+            context: Any = nullcontext(None)
             if need_browser:
                 from .session import BrowserSession
 
@@ -354,7 +354,7 @@ class UiService:
                     )
                 else:
                     run = resume_recipe(
-                        job.result,
+                        job.result or {},
                         resume_value,
                         recipe=recipe,
                         page=page,

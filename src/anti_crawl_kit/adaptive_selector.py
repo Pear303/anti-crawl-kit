@@ -279,16 +279,23 @@ def _features(node: _Node) -> ElementFeatures:
         if parent is not None
         else []
     )
-    has_parent = parent is not None and parent.tag != "#document"
+
+    parent_name = ""
+    parent_attribs: dict[str, str] = {}
+    parent_text = ""
+    if parent is not None and parent.tag != "#document":
+        parent_name = parent.tag
+        parent_attribs = dict(parent.attrs)
+        parent_text = parent.text()
 
     return ElementFeatures(
         tag=node.tag,
         text=node.text(),
         attributes=dict(node.attrs),
         path=" > ".join(path),
-        parent_name=parent.tag if has_parent else "",
-        parent_attribs=dict(parent.attrs) if has_parent else {},
-        parent_text=parent.text() if has_parent else "",
+        parent_name=parent_name,
+        parent_attribs=parent_attribs,
+        parent_text=parent_text,
         siblings=siblings,
     )
 
@@ -333,7 +340,12 @@ def selectors_for(element: Any) -> list[str]:
     out.append(tag)
 
     seen: set[str] = set()
-    return [s for s in out if not (s in seen or seen.add(s))]
+    unique: list[str] = []
+    for item in out:
+        if item not in seen:
+            seen.add(item)
+            unique.append(item)
+    return unique
 
 
 def _dict_diff(left: dict[str, str], right: dict[str, str]) -> float:

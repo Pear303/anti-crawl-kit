@@ -15,13 +15,13 @@ http = ["curl_cffi>=0.7.0"]
 # 声明式平台配置（YAML）
 config = ["PyYAML>=6.0"]
 # MCP server（给 agent 直接调用）
-mcp = ["mcp>=1.0"]
+mcp = ["mcp>=1.0,<2"]
 # 全部运行时能力
 all = [
     "patchright>=1.62.2",
     "curl_cffi>=0.7.0",
     "PyYAML>=6.0",
-    "mcp>=1.0",
+    "mcp>=1.0,<2",
 ]
 # 开发与 CI
 dev = [
@@ -29,7 +29,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.6",
     "build>=1.2",
-    "mypy>=1.11",
+    "mypy>=1.11,<3",
 ]
 
 [project.scripts]
@@ -99,7 +99,9 @@ select = ["E", "F", "W", "I", "UP", "B", "RUF100"]
 "src/anti_crawl_kit/ui_assets.py" = ["E501"]
 
 [tool.mypy]
-python_version = "3.10"
+# 类型检查用 3.11 口径：StrEnum 等 3.11 才进 typeshed 的 API 需要它。
+# 运行时兼容 3.10 由 CI 的 3.10 测试矩阵保证，不靠 mypy 兜底。
+python_version = "3.11"
 warn_unused_ignores = true
 ignore_missing_imports = true
 exclude = ["tests/", "examples/"]

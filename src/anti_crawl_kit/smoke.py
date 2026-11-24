@@ -428,7 +428,7 @@ def _run_js_render(case: SmokeCase, http_client: Any, page: Any) -> SmokeResult:
         )
 
     ok, actual = _judge(case, count)
-    metrics = {"render_wait_ms": waited_ms}
+    metrics: dict[str, Any] = {"render_wait_ms": waited_ms}
     if hasattr(page, "last_nav_metrics"):
         metrics["nav"] = dict(page.last_nav_metrics or {})
     return SmokeResult(
@@ -469,7 +469,7 @@ def _run_slow_load(case: SmokeCase, page: Any) -> SmokeResult:
     if case.min_elapsed_ms and elapsed_ms < case.min_elapsed_ms:
         ok = False
         actual += f"；耗时 {elapsed_ms}ms < 预期慢加载 {case.min_elapsed_ms}ms（用例需更新）"
-    metrics = {"render_wait_ms": waited_ms}
+    metrics: dict[str, Any] = {"render_wait_ms": waited_ms}
     if hasattr(page, "last_nav_metrics"):
         metrics["nav"] = dict(page.last_nav_metrics or {})
     return SmokeResult(

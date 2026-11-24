@@ -24,6 +24,7 @@ import json
 import platform
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -237,14 +238,14 @@ def run_browser_sites(
 
 
 # ── 报告 ────────────────────────────────────────────
-def _median(values: list[int]) -> int:
+def _median(values: Sequence[float]) -> float:
     if not values:
-        return 0
+        return 0.0
     ordered = sorted(values)
     mid = len(ordered) // 2
     if len(ordered) % 2:
-        return ordered[mid]
-    return int((ordered[mid - 1] + ordered[mid]) / 2)
+        return float(ordered[mid])
+    return (ordered[mid - 1] + ordered[mid]) / 2.0
 
 
 def _aggregate(results: list[BenchResult]) -> dict[tuple[str, str], BenchResult]:
@@ -258,9 +259,9 @@ def _aggregate(results: list[BenchResult]) -> dict[tuple[str, str], BenchResult]
         successful = [r for r in runs if r.ok] or runs
         base = dict(asdict(successful[0]))
         base["ok"] = any(r.ok for r in runs)
-        base["elapsed_ms"] = _median([r.elapsed_ms for r in successful])
-        base["bytes"] = _median([r.bytes for r in successful])
-        base["items"] = _median([r.items for r in successful])
+        base["elapsed_ms"] = int(_median([float(r.elapsed_ms) for r in successful]))
+        base["bytes"] = int(_median([float(r.bytes) for r in successful]))
+        base["items"] = int(_median([float(r.items) for r in successful]))
         out[key] = BenchResult(**base)
     return out
 
@@ -355,16 +356,6 @@ def _print_table(report: BenchReport, sites: list[Site]) -> None:
 
 
 # ── 基线断言 ────────────────────────────────────────
-def _median(values: list[float]) -> float:
-    if not values:
-        return 0.0
-    ordered = sorted(values)
-    mid = len(ordered) // 2
-    if len(ordered) % 2:
-        return float(ordered[mid])
-    return (ordered[mid - 1] + ordered[mid]) / 2.0
-
-
 def _group_stats(results: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, float]]:
     groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for row in results:
@@ -441,9 +432,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        sys.stdout.reconfigure(encoding="utf-8")
+        _reconfigure = getattr(sys.stdout, "reconfigure", None)
     except Exception:
-        pass
+        _reconfigure = None
+    if callable(_reconfigure):
+        try:
+            _reconfigure(encoding="utf-8")
+        except Exception:
+            pass
 
     sites = list(DEFAULT_SITES)
     report = BenchReport(

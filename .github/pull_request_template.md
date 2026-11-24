@@ -23,7 +23,8 @@
 
 > 证据包结构见 `.prctl/artifacts/<pr>/evidence.json`，用 `prctl verify` 校验。
 
-- [ ] `ruff check src tests` 通过
+- [ ] `ruff check .` 通过（含 examples / scripts）
+- [ ] `mypy src/anti_crawl_kit` 通过（0 错误）
 - [ ] `pytest -q` 通过（数量：____ passed / ____ skipped）
 - [ ] 覆盖率不低于 70%（`pytest --cov --cov-fail-under=70`）
 - [ ] 涉及 CLI 的改动已实际跑过命令，输出见评论

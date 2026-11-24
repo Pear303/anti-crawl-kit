@@ -138,3 +138,35 @@ def test_non_timeout_error_is_reraised() -> None:
 def test_closed_page_fails_ready_check() -> None:
     driver = FakeDriver(closed=True)
     assert _adapter(driver)._ensure_initial_navigation_ready() is False
+
+
+class _FakeContext:
+    def __init__(self, cookies: list[dict]) -> None:
+        self._cookies = cookies
+
+    def cookies(self) -> list[dict]:
+        return self._cookies
+
+
+def test_unknown_wait_until_fails_fast_without_retry() -> None:
+    driver = FakeDriver()
+    adapter = _adapter(driver)
+
+    with pytest.raises(ValueError, match="wait_until"):
+        adapter.goto("https://example.com/x", wait_until="networkidle2")
+
+    # 配置写错应该当场失败，不能进重试循环
+    assert driver.goto_calls == 0
+    assert driver.reload_calls == 0
+
+
+def test_get_cookies_returns_plain_dicts() -> None:
+    driver = FakeDriver()
+    raw = [{"name": "sid", "value": "1", "domain": "x.test", "httpOnly": True}]
+    driver.context = _FakeContext(raw)  # type: ignore[attr-defined]
+    adapter = _adapter(driver)
+
+    cookies = adapter.get_cookies()
+
+    assert cookies == raw
+    assert type(cookies[0]) is dict

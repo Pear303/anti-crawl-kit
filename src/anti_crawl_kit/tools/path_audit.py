@@ -1713,9 +1713,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        sys.stdout.reconfigure(encoding="utf-8")
+        _reconfigure = getattr(sys.stdout, "reconfigure", None)
     except Exception:
-        pass
+        _reconfigure = None
+    if callable(_reconfigure):
+        try:
+            _reconfigure(encoding="utf-8")
+        except Exception:
+            pass
 
     try:
         config = load_audit_config(args.config)

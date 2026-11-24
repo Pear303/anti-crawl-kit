@@ -86,6 +86,36 @@ def test_validate_min_len_and_pattern() -> None:
     assert result.pattern_errors  # "^Book"
 
 
+def test_min_len_skips_values_without_len() -> None:
+    """没有 __len__ 的字段不做长度检查（int / float）。"""
+    contract = _contract(
+        id_field="",
+        min_items=1,
+        max_duplicate_ratio=1.0,
+        fields={"likes": {"type": "any", "min_len": 5}},
+    )
+    result = validate_data([{"likes": 12}, {"likes": 3.5}], contract)
+    assert result.ok
+
+
+def test_min_len_tolerates_dynamic_len_objects() -> None:
+    """动态 __getattr__ 提供 __len__ 的脏值不能让整批校验抛 TypeError。"""
+
+    class DynamicLen:
+        def __getattr__(self, name: str):
+            if name == "__len__":
+                return lambda: 1
+            raise AttributeError(name)
+
+    contract = _contract(
+        id_field="",
+        min_items=1,
+        fields={"payload": {"type": "any", "min_len": 3}},
+    )
+    result = validate_data([{"payload": DynamicLen()}], contract)
+    assert result.ok
+
+
 def test_validate_duplicate_ratio() -> None:
     result = validate_data(
         [

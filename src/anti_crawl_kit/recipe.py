@@ -707,15 +707,18 @@ def _step_assert(params: dict[str, Any], runtime: RecipeRuntime) -> dict[str, An
     actual = params.get("value")
     expected = params.get("expected")
     op = str(params.get("op", "eq"))
+    # 显式放宽为 Any：比较是否合法由调用方保证，这里只负责路由
+    left: Any = actual
+    right: Any = expected
     ok = {
-        "eq": lambda: actual == expected,
-        "ne": lambda: actual != expected,
-        "gte": lambda: actual >= expected,
-        "lte": lambda: actual <= expected,
-        "gt": lambda: actual > expected,
-        "lt": lambda: actual < expected,
-        "in": lambda: actual in expected,
-        "contains": lambda: expected in actual,
+        "eq": lambda: left == right,
+        "ne": lambda: left != right,
+        "gte": lambda: left >= right,
+        "lte": lambda: left <= right,
+        "gt": lambda: left > right,
+        "lt": lambda: left < right,
+        "in": lambda: left in right,
+        "contains": lambda: right in left,
     }.get(op)
     if ok is None:
         raise ValueError(f"未知断言 op: {op}")

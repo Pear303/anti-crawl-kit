@@ -7,7 +7,49 @@
 
 ### 计划
 
-- mypy 错误从 143 个逐步清零。
+- 无（0.15.1 已清零 mypy；后续新代码不应再引入类型错误）。
+
+## [0.15.1] - 2026-11-24
+
+### 变更
+
+- **mypy 清零并转为阻塞检查**：`mypy src/anti_crawl_kit` 从 143 个错误降到 0，
+  CI 的 `typecheck` job 去掉 `continue-on-error`。
+- mypy 检查口径改为 Python 3.11：`enum.StrEnum` 只在 3.11+ 的 typeshed 里，
+  3.10 模式会把所有 `StrEnum` 子类误判成普通 `str`（曾贡献 76 个假错误）。
+  运行时兼容 3.10 仍由 CI 的 3.10 测试矩阵保证。
+
+### 修复
+
+- `session.py` 的 playwright/browser/context/page 字段显式标注 `Any`：
+  patchright 是可选依赖，之前被推断成 `None`，导致 17 个误报。
+- `report.py` 的 `meta` / `summary` 先收窄成 `Mapping` 再用，
+  不再对可能为 `None` 的 `.get()` 调用。
+- `report_diff.py` 的 `before` / `after` 在条目与指标两个循环里复用，
+  类型互相冲突；改名为 `before_item` / `before_metric` 并补 None 守卫。
+- `recipe.py` 的断言比较把左右值显式放宽为 `Any`：`>=` / `in` 对 `None`
+  不合法，但具体类型由调用方保证。
+- `generic.py` 的 `kwargs` 标注 `dict[str, Any]`；计数转换不再借用 `str` 变量。
+- `page.py` 的 `wait_until` 用 `cast` 传给驱动（配置是字符串，驱动要 Literal）；
+  `get_cookies()` 显式转成 `list[dict]`。
+- `tools/bench.py` 的 `_median` 重复定义合并为一个 `Sequence[float] -> float`。
+  **输出有一处可见变化**：`_aggregate` 的 `elapsed_ms` / `bytes` / `items` 在调用处
+  `int()` 回退，bench 表格与终端汇总从浮点变成整数——这与 `BenchResult` 的字段
+  声明一致；原来是后定义的 float 版覆盖了 int 版，属于隐式行为。
+- `data_contract.py` 用 `isinstance(value, Sized)` 替代 `hasattr("__len__")`。
+- `adaptive_selector.py` 的父节点判断改用 `parent is not None`，让类型窄化生效；
+  去重不再依赖 `set.add()` 的返回值。
+- `console.py` 删除两处已被 mypy 判定为无用的 `type: ignore`。
+- `PageAdapter.goto` 增加 `wait_until` 白名单：配置写错时立刻 `ValueError`，
+  不再进 3 次重试（原来要白等约 6 秒）。
+- `data_contract` 的长度校验保留「没有 `__len__` 就跳过」的语义，同时容忍
+  动态 `__getattr__` 提供的 `__len__`，脏值不会让整批校验抛 `TypeError`。
+- `dev` 依赖的 mypy 加上界（`<3`），CI 的 typecheck 改为装 `.[all,dev]`，
+  让可选依赖的存根参与检查，避免以后 mypy 大版本升级把 PR 全部打红。
+- `mcp` 依赖收窄为 `mcp>=1.0,<2`：mcp 2.x 已把 `FastMCP` 改名为
+  `MCPServer`（`mcp.server.fastmcp` 只剩报错存根），当前适配的是 1.x。
+- `notify.py` 的 `winsound.MessageBeep` / `MB_ICONHAND` 改用 `getattr` 探针：
+  Linux 的 typeshed 里 win­sound 没有这两个成员，会让跨平台类型的 CI 误报。
 
 ## [0.15.0] - 2026-11-24
 

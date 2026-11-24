@@ -70,7 +70,7 @@ def install_safe_print() -> None:
     global _installed
     if _installed:
         return
-    builtins.print = safe_print  # type: ignore[assignment]
+    builtins.print = safe_print
     _installed = True
 
 
@@ -79,7 +79,7 @@ def uninstall_safe_print() -> None:
     global _installed
     if not _installed:
         return
-    builtins.print = _BUILTIN_PRINT  # type: ignore[assignment]
+    builtins.print = _BUILTIN_PRINT
     _installed = False
 
 

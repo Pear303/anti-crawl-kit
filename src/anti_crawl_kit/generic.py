@@ -181,7 +181,7 @@ class GenericCollector:
         from .session import BrowserSession
 
         spec = self.spec
-        kwargs = {
+        kwargs: dict[str, Any] = {
             "headless": spec.headless,
             "data_dir": spec.data_dir or None,
             "anti_crawl": True,
@@ -482,10 +482,11 @@ class GenericCollector:
                         for v in value
                     ]
                 elif isinstance(value, str):
-                    v = clean_anti_crawl_watermark(value)
+                    cleaned = clean_anti_crawl_watermark(value)
                     if field_spec and field_spec.transform == "count":
-                        v = parse_count(v)
-                    clean[name] = v
+                        clean[name] = parse_count(cleaned)
+                    else:
+                        clean[name] = cleaned
                 else:
                     clean[name] = value
             if self.spec.max_items and len(out) >= self.spec.max_items:

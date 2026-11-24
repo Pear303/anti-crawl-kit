@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     need_http = any(step.uses.startswith("http_") for step in recipe.steps)
 
     http_client = None
-    context = nullcontext(None)
+    context: Any = nullcontext(None)
     try:
         if need_http:
             from anti_crawl_kit.http import AntiRiskHttpClient

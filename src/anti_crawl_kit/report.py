@@ -154,9 +154,13 @@ def detect_kind(data: Mapping[str, Any] | None) -> str:
 
 
 def _model_audit(data: Mapping[str, Any]) -> dict[str, Any]:
-    meta = data.get("meta") if isinstance(data.get("meta"), Mapping) else {}
+    raw_meta = data.get("meta")
+    meta: Mapping[str, Any] = raw_meta if isinstance(raw_meta, Mapping) else {}
+    raw_recommendation = meta.get("recommendation")
+    recommendation: Mapping[str, Any] = (
+        raw_recommendation if isinstance(raw_recommendation, Mapping) else {}
+    )
     rows = meta.get("path_matrix") or []
-    recommendation = meta.get("recommendation") or {}
     hard_stop = str(meta.get("hard_stop") or "")
 
     cells = []
@@ -281,7 +285,8 @@ def _model_audit(data: Mapping[str, Any]) -> dict[str, Any]:
 
 def _model_health(data: Mapping[str, Any]) -> dict[str, Any]:
     results = [item for item in (data.get("results") or []) if isinstance(item, Mapping)]
-    summary = data.get("summary") if isinstance(data.get("summary"), Mapping) else {}
+    raw_summary = data.get("summary")
+    summary: Mapping[str, Any] = raw_summary if isinstance(raw_summary, Mapping) else {}
     fail = int(summary.get("FAIL") or 0)
     warn = int(summary.get("WARN") or 0)
     ok = int(summary.get("OK") or 0)
@@ -346,7 +351,8 @@ def _model_health(data: Mapping[str, Any]) -> dict[str, Any]:
 
 def _model_smoke(data: Mapping[str, Any]) -> dict[str, Any]:
     results = [item for item in (data.get("results") or []) if isinstance(item, Mapping)]
-    summary = data.get("summary") if isinstance(data.get("summary"), Mapping) else {}
+    raw_summary = data.get("summary")
+    summary: Mapping[str, Any] = raw_summary if isinstance(raw_summary, Mapping) else {}
     passed = int(summary.get("PASS") or 0)
     failed = int(summary.get("FAIL") or 0)
     skipped = int(summary.get("SKIP") or 0)
